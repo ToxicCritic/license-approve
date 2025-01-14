@@ -2,38 +2,23 @@ package main
 
 import (
 	"LicenseApp/pkg/db"
+	"LicenseApp/pkg/handlers"
+	"log"
 	"net/http"
-
-	"github.com/gin-gonic/gin"
 )
 
 func main() {
 	db.Init()
+
 	db.Migrate()
-	r := gin.Default()
 
-	r.GET("/", func(c *gin.Context) {
-		c.JSON(200, gin.H{"message": "Server is running!"})
-	})
+	http.HandleFunc("/license-requests", handlers.GetLicenseRequestsHandler)
+	http.HandleFunc("/approve-license", handlers.ApproveLicenseRequestHandler)
+	http.HandleFunc("/reject-license", handlers.RejectLicenseRequestHandler)
 
-	// Проверка лицензии
-	r.GET("/license/check", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"status":  "ok",
-			"message": "License is valid",
-		})
-	})
-
-	// Создание лицензии
-	r.POST("/license/create", func(c *gin.Context) {
-		c.JSON(http.StatusCreated, gin.H{
-			"status":  "success",
-			"message": "License created",
-		})
-	})
-
-	err := r.Run(":8080")
+	log.Println("Server started on port 8080...")
+	err := http.ListenAndServe(":8080", nil)
 	if err != nil {
-		panic(err)
+		log.Fatal("Error starting server:", err)
 	}
 }
