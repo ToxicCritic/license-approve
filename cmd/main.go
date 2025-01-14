@@ -9,6 +9,7 @@ import (
 
 func main() {
 	db.Init()
+	db.Migrate()
 	r := gin.Default()
 
 	r.GET("/", func(c *gin.Context) {
