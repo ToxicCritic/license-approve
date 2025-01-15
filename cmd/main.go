@@ -4,11 +4,16 @@ import (
 	"LicenseApp/pkg/db"
 	"LicenseApp/pkg/handlers"
 	"LicenseApp/pkg/security"
+	"embed"
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 	"time"
 )
+
+var tmplFS embed.FS
 
 const myUserID = 13
 
@@ -16,7 +21,6 @@ func main() {
 	db.Init()
 	db.Migrate()
 
-	security.LoadKeys("config/keys/private_key.pem", "config/keys/public_key.pem")
 	licenseChecker := &db.LicenseDBChecker{DB: db.DB}
 
 	licenseCheckHandler := handlers.LicenseCheckHandler{
@@ -29,8 +33,19 @@ func main() {
 	http.HandleFunc("/check-license", licenseCheckHandler.CheckLicenseHandler)
 
 	// Сертификат и ключ (самоподписанные)
-	certFile := "config/certs/server.crt"
-	keyFile := "config/certs/server.key"
+	exeFile, err := os.Executable()
+
+	if err != nil {
+		log.Fatal("Error finding executable path")
+	}
+
+	exeDir := filepath.Dir(exeFile)
+	certFile := exeDir + "/config/certs/server.crt"
+	keyFile := exeDir + "/config/certs/server.key"
+	log.Println("Certificate file path:" + certFile)
+	log.Println("key file path:" + keyFile)
+
+	security.LoadKeys(exeDir+"/config/keys/private_key.pem", exeDir+"/config/keys/public_key.pem")
 
 	go func() {
 		log.Println("HTTPS server started on port 8443...")

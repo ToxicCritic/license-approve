@@ -8,6 +8,7 @@ import (
 	"log"
 )
 
+// Создает заявку на лицензию
 func CreateLicenseRequest(userID int, publicKey string) (int, error) {
 	var newID int
 	err := DB.QueryRow(`
@@ -21,6 +22,7 @@ func CreateLicenseRequest(userID int, publicKey string) (int, error) {
 	return newID, nil
 }
 
+// Получает заявки на рассмотрении (status = 'pending')
 func GetLicenseRequests() ([]models.LicenseRequest, error) {
 	rows, err := DB.Query("SELECT * FROM license_requests WHERE status = 'pending' ORDER BY created_at DESC")
 	if err != nil {
@@ -42,6 +44,7 @@ func GetLicenseRequests() ([]models.LicenseRequest, error) {
 	return requests, nil
 }
 
+// Одобряет заявку
 func ApproveLicenseRequest(id int) error {
 	var userID int
 	var publicKey string
@@ -74,6 +77,7 @@ func ApproveLicenseRequest(id int) error {
 	return nil
 }
 
+// Отклоняет заявку
 func RejectLicenseRequest(id int) error {
 	_, err := DB.Exec("UPDATE license_requests SET status = 'rejected' WHERE id = $1", id)
 	if err != nil {
@@ -81,4 +85,22 @@ func RejectLicenseRequest(id int) error {
 		return err
 	}
 	return nil
+}
+
+func GetLicenseByUserID(userID int) (*models.License, error) {
+	row := DB.QueryRow(`
+        SELECT id, user_id, license_key, license_signature, status 
+        FROM licenses
+        WHERE user_id = $1 AND status = 'approved'
+        LIMIT 1
+    `, userID)
+
+	var lic models.License
+	err := row.Scan(&lic.ID, &lic.UserID, &lic.LicenseKey, &lic.LicenseSignature, &lic.Status)
+	if err != nil {
+		log.Println("Error fetching license:", err)
+		return nil, err
+	}
+
+	return &lic, nil
 }

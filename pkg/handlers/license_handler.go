@@ -1,10 +1,12 @@
 package handlers
 
 import (
+	"LicenseApp/internal/templates"
 	"LicenseApp/pkg/db"
+
 	"encoding/json"
 	"fmt"
-	"html/template"
+	"log"
 	"net/http"
 	"strconv"
 )
@@ -66,16 +68,12 @@ func GetLicenseRequestsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tmpl, err := template.ParseFiles("templates/admin_requests.html")
-	if err != nil {
-		http.Error(w, "Internal template error", http.StatusInternalServerError)
-		return
-	}
+	tmpl := templates.ParseTemplates()
 
-	err = tmpl.Execute(w, requests)
+	err = tmpl.ExecuteTemplate(w, "admin_requests.html", requests)
 	if err != nil {
+		log.Println("Error rendering template:", err)
 		http.Error(w, "Error rendering template", http.StatusInternalServerError)
-		return
 	}
 }
 
