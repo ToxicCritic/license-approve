@@ -1,0 +1,46 @@
+# ---> Go
+# Сборочные файлы
+bin/
+build/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Кеш модуля Go
+pkg/
+# Если используешь vendor, можно исключить из репозитория
+# vendor/
+
+# Конфигурационные файлы IDE/редакторов
+.idea/
+.vscode/
+*.swp
+
+# Файлы тестов
+*.test
+*.out
+coverage/
+
+# Файлы ОС
+.DS_Store
+Thumbs.db
+
+# Ключи и сертификаты
+config/
+*.pem
+*.key
+*.crt
+
+# Личные данные, логины, пароли
+*.env
+.env.*
+
+# Логи и временные файлы
+*.log
+temp/
+tmp/
+
+# Если есть специфичные настройки
+# custom_config.yml
+# secrets.yaml

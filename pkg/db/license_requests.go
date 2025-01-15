@@ -1,11 +1,13 @@
 package db
 
 import (
+	"LicenseApp/pkg/licensegen"
 	"LicenseApp/pkg/models"
+	"LicenseApp/pkg/security"
+	"fmt"
 	"log"
 )
 
-// Получить список всех запросов на лицензии
 func GetLicenseRequests() ([]models.LicenseRequest, error) {
 	rows, err := DB.Query("SELECT * FROM license_requests")
 	if err != nil {
@@ -27,17 +29,38 @@ func GetLicenseRequests() ([]models.LicenseRequest, error) {
 	return requests, nil
 }
 
-// Одобрить запрос на лицензию
 func ApproveLicenseRequest(id int) error {
-	_, err := DB.Exec("UPDATE license_requests SET status = 'approved' WHERE id = $1", id)
+	var userID int
+	var publicKey string
+
+	err := DB.QueryRow("SELECT user_id, public_key FROM license_requests WHERE id = $1", id).
+		Scan(&userID, &publicKey)
 	if err != nil {
-		log.Println("Error updating license request:", err)
 		return err
 	}
+
+	licenseKey := licensegen.GenerateHexLicenseKey(publicKey)
+
+	signature, err := security.SignLicense(licenseKey)
+	if err != nil {
+		return fmt.Errorf("failed to sign license: %v", err)
+	}
+
+	_, err = DB.Exec(`INSERT INTO licenses (user_id, license_key, license_signature, status) 
+					  VALUES ($1, $2, $3, 'approved')`,
+		userID, licenseKey, signature)
+	if err != nil {
+		return err
+	}
+
+	_, err = DB.Exec("UPDATE license_requests SET status = 'approved' WHERE id = $1", id)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
-// Отклонить запрос на лицензию
 func RejectLicenseRequest(id int) error {
 	_, err := DB.Exec("UPDATE license_requests SET status = 'rejected' WHERE id = $1", id)
 	if err != nil {

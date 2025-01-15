@@ -9,5 +9,4 @@ type License struct {
 	LicenseKey string    `json:"license_key"`
 	Status     string    `json:"status"` // Статус лицензии (active, expired)
 	IssuedAt   time.Time `json:"issued_at"`
-	ExpiresAt  time.Time `json:"expires_at"`
 }

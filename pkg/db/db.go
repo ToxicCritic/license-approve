@@ -41,12 +41,13 @@ func Migrate() {
 	// Создание таблицы лицензий
 	createLicensesTable := `
 	CREATE TABLE IF NOT EXISTS licenses (
-		id SERIAL PRIMARY KEY,
-		user_id INT NOT NULL,
-		license_key TEXT NOT NULL UNIQUE,
-		status VARCHAR(50) DEFAULT 'pending',
-		issued_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-		FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    id SERIAL PRIMARY KEY,
+    user_id INT NOT NULL,
+    license_key TEXT NOT NULL UNIQUE,
+    license_signature TEXT,
+    status VARCHAR(50) DEFAULT 'pending',
+    issued_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 	);
 	`
 
