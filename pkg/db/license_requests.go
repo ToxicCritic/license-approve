@@ -8,6 +8,19 @@ import (
 	"log"
 )
 
+func CreateLicenseRequest(userID int, publicKey string) (int, error) {
+	var newID int
+	err := DB.QueryRow(`
+        INSERT INTO license_requests (user_id, public_key, status)
+        VALUES ($1, $2, 'pending')
+        RETURNING id
+    `, userID, publicKey).Scan(&newID)
+	if err != nil {
+		return 0, err
+	}
+	return newID, nil
+}
+
 func GetLicenseRequests() ([]models.LicenseRequest, error) {
 	rows, err := DB.Query("SELECT * FROM license_requests")
 	if err != nil {

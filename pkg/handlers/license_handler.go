@@ -11,6 +11,45 @@ type RequestID struct {
 	ID int `json:"id"`
 }
 
+func CreateLicenseRequestHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed. Use POST.", http.StatusMethodNotAllowed)
+		return
+	}
+
+	type requestBody struct {
+		UserID    int    `json:"user_id"`
+		PublicKey string `json:"public_key"`
+	}
+
+	var input requestBody
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		http.Error(w, "Failed to parse request body", http.StatusBadRequest)
+		return
+	}
+
+	newID, err := db.CreateLicenseRequest(input.UserID, input.PublicKey)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to create license request: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	type responseBody struct {
+		RequestID int    `json:"request_id"`
+		Status    string `json:"status"`
+		Message   string `json:"message"`
+	}
+
+	resp := responseBody{
+		RequestID: newID,
+		Status:    "pending",
+		Message:   "License request created successfully",
+	}
+
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(resp)
+}
+
 // Обработчик для получения запросов на лицензии
 func GetLicenseRequestsHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {

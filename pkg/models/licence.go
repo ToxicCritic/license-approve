@@ -8,6 +8,6 @@ type License struct {
 	UserID           int       `json:"user_id"`
 	LicenseKey       string    `json:"license_key"`
 	LicenseSignature string    `json:"license_signature"`
-	Status           string    `json:"status"` // active, expired, approvedJ
+	Status           string    `json:"status"` // active, expired, approved
 	IssuedAt         time.Time `json:"issued_at"`
 }
