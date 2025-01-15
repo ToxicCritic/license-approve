@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-const myUserID = 10
+const myUserID = 12
 
 func main() {
 	db.Init()
@@ -23,9 +23,9 @@ func main() {
 		Checker: &db.LicenseDBChecker{DB: db.DB},
 	}
 
-	http.HandleFunc("/license-requests", handlers.GetLicenseRequestsHandler)
-	http.HandleFunc("/approve-license", handlers.ApproveLicenseRequestHandler)
-	http.HandleFunc("/reject-license", handlers.RejectLicenseRequestHandler)
+	http.HandleFunc("/admin/license-requests", handlers.GetLicenseRequestsHandler)
+	http.HandleFunc("/admin/approve-license", handlers.ApproveLicenseRequestHandler)
+	http.HandleFunc("/admin/reject-license", handlers.RejectLicenseRequestHandler)
 	http.HandleFunc("/check-license", licenseCheckHandler.CheckLicenseHandler)
 
 	// Сертификат и ключ (самоподписанные)
@@ -75,6 +75,21 @@ func main() {
 		}
 		if hasLicenseAgain {
 			fmt.Println("License is now approved! Program can continue.")
+
+			lic, err := db.GetLicenseByUserID(myUserID)
+			if err != nil {
+				log.Fatalf("Failed to get license by userID=%d: %v", myUserID, err)
+			}
+
+			isValid, err := security.VerifyLicenseSignature(lic.LicenseKey, lic.LicenseSignature)
+			if err != nil {
+				log.Fatalf("Error verifying signature: %v", err)
+			}
+			if !isValid {
+				log.Println("License signature is INVALID. Possibly tampered or incorrectly signed.")
+			} else {
+				log.Println("License signature is valid. User license confirmed!")
+			}
 		} else {
 			fmt.Println("Still no license. Program remains in restricted mode or exits.")
 		}

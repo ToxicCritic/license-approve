@@ -4,13 +4,16 @@ import (
 	"LicenseApp/pkg/db"
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"net/http"
+	"strconv"
 )
 
 type RequestID struct {
 	ID int `json:"id"`
 }
 
+// Обработчик для создания заявки на лицензию
 func CreateLicenseRequestHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed. Use POST.", http.StatusMethodNotAllowed)
@@ -63,35 +66,50 @@ func GetLicenseRequestsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(requests)
+	tmpl, err := template.ParseFiles("templates/admin_requests.html")
+	if err != nil {
+		http.Error(w, "Internal template error", http.StatusInternalServerError)
+		return
+	}
+
+	err = tmpl.Execute(w, requests)
+	if err != nil {
+		http.Error(w, "Error rendering template", http.StatusInternalServerError)
+		return
+	}
 }
 
-// Обработчик для подтверждения запроса на лицензию
 func ApproveLicenseRequestHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Invalid request method, use POST", http.StatusMethodNotAllowed)
 		return
 	}
 
-	var req RequestID
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Failed to parse JSON body", http.StatusBadRequest)
-		return
-	}
-	if req.ID <= 0 {
-		http.Error(w, "Invalid request ID", http.StatusBadRequest)
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Failed to parse form data", http.StatusBadRequest)
 		return
 	}
 
-	err := db.ApproveLicenseRequest(req.ID)
+	idStr := r.FormValue("id")
+	if idStr == "" {
+		http.Error(w, "Missing request ID", http.StatusBadRequest)
+		return
+	}
+
+	requestID, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "Invalid request ID (not an integer)", http.StatusBadRequest)
+		return
+	}
+
+	err = db.ApproveLicenseRequest(requestID)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Failed to approve license request: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("License request approved"))
+	// После успеха редиректим обратно на список
+	http.Redirect(w, r, "/admin/license-requests", http.StatusSeeOther)
 }
 
 // Обработчик для отклонения запроса на лицензию
@@ -101,22 +119,29 @@ func RejectLicenseRequestHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req RequestID
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Failed to parse JSON body", http.StatusBadRequest)
-		return
-	}
-	if req.ID <= 0 {
-		http.Error(w, "Invalid request ID", http.StatusBadRequest)
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Failed to parse form data", http.StatusBadRequest)
 		return
 	}
 
-	err := db.RejectLicenseRequest(req.ID)
+	idStr := r.FormValue("id")
+	if idStr == "" {
+		http.Error(w, "Missing request ID", http.StatusBadRequest)
+		return
+	}
+
+	requestID, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "Invalid request ID (not an integer)", http.StatusBadRequest)
+		return
+	}
+
+	err = db.RejectLicenseRequest(requestID)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Failed to reject license request: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("License request rejected"))
+	// После успеха редиректим обратно на список
+	http.Redirect(w, r, "/admin/license-requests", http.StatusSeeOther)
 }
