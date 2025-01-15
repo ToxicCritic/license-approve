@@ -22,7 +22,7 @@ func CreateLicenseRequest(userID int, publicKey string) (int, error) {
 }
 
 func GetLicenseRequests() ([]models.LicenseRequest, error) {
-	rows, err := DB.Query("SELECT * FROM license_requests WHERE status != 'rejected' ORDER BY created_at DESC")
+	rows, err := DB.Query("SELECT * FROM license_requests WHERE status = 'pending' ORDER BY created_at DESC")
 	if err != nil {
 		log.Println("Error fetching license requests:", err)
 		return nil, err
