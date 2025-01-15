@@ -11,10 +11,16 @@ func main() {
 	db.Init()
 	db.Migrate()
 
+	licenseCheckHandler := handlers.LicenseCheckHandler{
+		Checker: &db.LicenseDBChecker{DB: db.DB},
+	}
+
 	http.HandleFunc("/license-requests", handlers.GetLicenseRequestsHandler)
 	http.HandleFunc("/approve-license", handlers.ApproveLicenseRequestHandler)
 	http.HandleFunc("/reject-license", handlers.RejectLicenseRequestHandler)
+	http.HandleFunc("/check-license", licenseCheckHandler.CheckLicenseHandler)
 
+	// Сертификат и ключ (самоподписанные)
 	certFile := "config/certs/server.crt"
 	keyFile := "config/certs/server.key"
 

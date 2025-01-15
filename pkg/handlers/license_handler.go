@@ -3,12 +3,21 @@ package handlers
 import (
 	"LicenseApp/pkg/db"
 	"encoding/json"
+	"fmt"
 	"net/http"
-	"strconv"
 )
+
+type RequestID struct {
+	ID int `json:"id"`
+}
 
 // Обработчик для получения запросов на лицензии
 func GetLicenseRequestsHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Invalid request method, use GET", http.StatusMethodNotAllowed)
+		return
+	}
+
 	requests, err := db.GetLicenseRequests()
 	if err != nil {
 		http.Error(w, "Failed to get license requests", http.StatusInternalServerError)
@@ -19,18 +28,26 @@ func GetLicenseRequestsHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(requests)
 }
 
-// Обработчик для одобрения запроса на лицензию
+// Обработчик для подтверждения запроса на лицензию
 func ApproveLicenseRequestHandler(w http.ResponseWriter, r *http.Request) {
-	idStr := r.URL.Query().Get("id")
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		http.Error(w, "Invalid license request ID", http.StatusBadRequest)
+	if r.Method != http.MethodPost {
+		http.Error(w, "Invalid request method, use POST", http.StatusMethodNotAllowed)
 		return
 	}
 
-	err = db.ApproveLicenseRequest(id)
+	var req RequestID
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Failed to parse JSON body", http.StatusBadRequest)
+		return
+	}
+	if req.ID <= 0 {
+		http.Error(w, "Invalid request ID", http.StatusBadRequest)
+		return
+	}
+
+	err := db.ApproveLicenseRequest(req.ID)
 	if err != nil {
-		http.Error(w, "Failed to approve license request", http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("Failed to approve license request: %v", err), http.StatusInternalServerError)
 		return
 	}
 
@@ -40,16 +57,24 @@ func ApproveLicenseRequestHandler(w http.ResponseWriter, r *http.Request) {
 
 // Обработчик для отклонения запроса на лицензию
 func RejectLicenseRequestHandler(w http.ResponseWriter, r *http.Request) {
-	idStr := r.URL.Query().Get("id")
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		http.Error(w, "Invalid license request ID", http.StatusBadRequest)
+	if r.Method != http.MethodPost {
+		http.Error(w, "Invalid request method, use POST", http.StatusMethodNotAllowed)
 		return
 	}
 
-	err = db.RejectLicenseRequest(id)
+	var req RequestID
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Failed to parse JSON body", http.StatusBadRequest)
+		return
+	}
+	if req.ID <= 0 {
+		http.Error(w, "Invalid request ID", http.StatusBadRequest)
+		return
+	}
+
+	err := db.RejectLicenseRequest(req.ID)
 	if err != nil {
-		http.Error(w, "Failed to reject license request", http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("Failed to reject license request: %v", err), http.StatusInternalServerError)
 		return
 	}
 
