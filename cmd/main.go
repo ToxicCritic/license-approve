@@ -122,13 +122,15 @@ func main() {
 			log.Fatalf("Error checking existing license requests: %v", err)
 		}
 
+		var requestID int
 		if pendingRequest != nil {
 			fmt.Printf("User %d already has a pending license request #%d.\n", myUserID, pendingRequest.ID)
 			fmt.Println("Waiting for the request to be approved...")
+			requestID = pendingRequest.ID
 		} else {
 			fmt.Printf("License not found for user %d. Creating a license request...\n", myUserID)
 			// Создание новой заявки на лицензию
-			requestID, err := db.CreateLicenseRequest(myUserID, "MOCK_PUBLIC_KEY")
+			requestID, err = db.CreateLicenseRequest(myUserID, "MOCK_PUBLIC_KEY")
 			if err != nil {
 				log.Fatalf("Failed to create license request: %v", err)
 			}
@@ -141,7 +143,7 @@ func main() {
 		}
 
 		// Запуск периодической проверки лицензии
-		go func() {
+		go func(reqID int) {
 			defer wg.Done()
 			ticker := time.NewTicker(checkInterval)
 			defer ticker.Stop()
@@ -178,14 +180,29 @@ func main() {
 						return
 					} else {
 						log.Println("License still not approved. Continuing to check...")
+
+						// Дополнительная проверка статуса заявки
+						req, err := db.GetLicenseRequestByID(reqID)
+						if err != nil {
+							log.Printf("Error fetching license request status: %v", err)
+							continue
+						}
+						if req == nil {
+							log.Printf("License request #%d not found.", reqID)
+							continue
+						}
+						if req.Status == "rejected" {
+							fmt.Println("License request has been rejected. Stopping license checks.")
+							return
+						}
 					}
 				case <-timeout:
 					fmt.Println("License approval wait time has expired.")
-					// Решить, что делать дальше: выйти из программы или оставить в ограниченном режиме
+					// Решите, что делать дальше: выйти из программы или оставить в ограниченном режиме
 					os.Exit(1)
 				}
 			}
-		}()
+		}(requestID)
 	} else {
 		fmt.Printf("License found for user %d. The program can run fully.\n", myUserID)
 	}

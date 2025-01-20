@@ -153,3 +153,22 @@ func GetPendingLicenseRequestByUserID(userID int) (*models.LicenseRequest, error
 	}
 	return &req, nil
 }
+
+func GetLicenseRequestByID(requestID int) (*models.LicenseRequest, error) {
+	var req models.LicenseRequest
+	query := `
+		SELECT id, user_id, public_key, status, created_at
+		FROM license_requests
+		WHERE id = $1
+		LIMIT 1
+	`
+	err := DB.QueryRow(query, requestID).Scan(&req.ID, &req.UserID, &req.PublicKey, &req.Status, &req.CreatedAt)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil // Заявка не найдена
+		}
+		log.Printf("Error fetching license request %d: %v", requestID, err)
+		return nil, err
+	}
+	return &req, nil
+}
