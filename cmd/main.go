@@ -33,7 +33,7 @@ func main() {
 		Checker: licenseChecker,
 	}
 
-	// Регистрация обработчиков без аутентификации
+	// Регистрация обработчиков
 	http.HandleFunc("/admin/license-requests", handlers.GetLicenseRequestsHandler)
 	http.HandleFunc("/admin/approve-license", handlers.ApproveLicenseRequestHandler)
 	http.HandleFunc("/admin/reject-license", handlers.RejectLicenseRequestHandler)
@@ -198,7 +198,7 @@ func main() {
 					}
 				case <-timeout:
 					fmt.Println("License approval wait time has expired.")
-					// Решите, что делать дальше: выйти из программы или оставить в ограниченном режиме
+					// Решить, что делать дальше: выйти из программы или оставить в ограниченном режиме
 					os.Exit(1)
 				}
 			}
