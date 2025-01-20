@@ -2,6 +2,7 @@
 package main
 
 import (
+	"LicenseApp/client/pkg/errors"
 	"LicenseApp/client/pkg/handlers"
 	"fmt"
 	"log"
@@ -85,6 +86,11 @@ func main() {
 		Transport: transport,
 	}
 
+	// Генерация или получение публичного ключа пользователя
+	// Здесь предполагается, что публичный ключ уже существует и хранится в файле или переменной
+	// Для примера используем строку "MOCK_PUBLIC_KEY"
+	publicKey := "MOCK_PUBLIC_KEY"
+
 	// Создание WaitGroup для ожидания завершения периодических проверок
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -92,32 +98,60 @@ func main() {
 	// Запуск периодической проверки лицензии
 	go func() {
 		defer wg.Done()
-		ticker := time.NewTicker(checkInterval)
-		defer ticker.Stop()
 
-		timeout := time.After(maxCheckDuration)
+		// Проверяем, есть ли у пользователя активная лицензия
+		hasLicense, err := handlers.CheckLicense(client, serverURL, userID)
+		if err != nil {
+			log.Printf("Failed to check license: %v", err)
+			return
+		}
 
-		for {
-			select {
-			case <-ticker.C:
-				// Вызов API для проверки лицензии
-				hasLicense, err := handlers.CheckLicense(client, serverURL, userID)
-				if err != nil {
-					log.Printf("Failed to check license: %v", err)
-					continue
-				}
-				if hasLicense {
-					fmt.Println("License approved! The client can continue.")
-					// Здесь можно добавить дальнейшую логику работы клиента
-					return
+		if !hasLicense {
+			// Создаем заявку на лицензию
+			requestID, err := handlers.CreateLicenseRequest(client, serverURL, userID, publicKey)
+			if err != nil {
+				// Проверяем, была ли ошибка из-за существующей заявки
+				if respErr, ok := err.(*errors.LicenseRequestExistsError); ok {
+					log.Printf("License request already exists with ID %d. Waiting for approval...", respErr.RequestID)
+					requestID = respErr.RequestID
 				} else {
-					log.Println("License not approved yet. Continuing to check...")
+					log.Printf("Failed to create license request: %v", err)
+					return
 				}
-			case <-timeout:
-				fmt.Println("License approval wait time has expired.")
-				// Решите, что делать дальше: выйти из программы или оставить в ограниченном режиме
-				os.Exit(1)
+			} else {
+				log.Printf("License request #%d created. Waiting for approval...", requestID)
 			}
+
+			ticker := time.NewTicker(checkInterval)
+			defer ticker.Stop()
+
+			timeout := time.After(maxCheckDuration)
+
+			for {
+				select {
+				case <-ticker.C:
+					// Проверяем статус лицензии
+					hasLicenseNow, err := handlers.CheckLicense(client, serverURL, userID)
+					if err != nil {
+						log.Printf("Failed to check license: %v", err)
+						continue
+					}
+					if hasLicenseNow {
+						fmt.Println("License approved! The client can continue.")
+						// Здесь можно добавить дальнейшую логику работы клиента
+						return
+					} else {
+						log.Println("License still not approved. Continuing to check...")
+					}
+				case <-timeout:
+					fmt.Println("License approval wait time has expired.")
+					// Решите, что делать дальше: выйти из программы или оставить в ограниченном режиме
+					os.Exit(1)
+				}
+			}
+		} else {
+			fmt.Printf("License found for user %d. The client can continue.\n", userID)
+			// Здесь можно добавить дальнейшую логику работы клиента
 		}
 	}()
 
