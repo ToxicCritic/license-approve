@@ -1,10 +1,10 @@
-// cmd/main.go
+// server/main.go
 package main
 
 import (
-	"LicenseApp/pkg/db"
-	"LicenseApp/pkg/handlers"
-	"LicenseApp/pkg/security"
+	"LicenseApp/server/pkg/db"
+	"LicenseApp/server/pkg/handlers"
+	"LicenseApp/server/pkg/security"
 	"fmt"
 	"log"
 	"net/http"
@@ -15,7 +15,6 @@ import (
 )
 
 const (
-	myUserID         = 13
 	checkInterval    = 10 * time.Second // Интервал между проверками лицензии
 	maxCheckDuration = 5 * time.Minute  // Максимальное время ожидания одобрения лицензии
 )
@@ -33,11 +32,10 @@ func main() {
 		Checker: licenseChecker,
 	}
 
-	// Регистрация обработчиков
 	http.HandleFunc("/admin/license-requests", handlers.GetLicenseRequestsHandler)
 	http.HandleFunc("/admin/approve-license", handlers.ApproveLicenseRequestHandler)
 	http.HandleFunc("/admin/reject-license", handlers.RejectLicenseRequestHandler)
-	http.HandleFunc("/check-license", licenseCheckHandler.CheckLicenseHandler)
+	http.HandleFunc("/api/check-license", licenseCheckHandler.CheckLicenseHandler)
 
 	// Получение текущей рабочей директории
 	cwd, err := os.Getwd()
@@ -46,7 +44,7 @@ func main() {
 	}
 
 	// Определение пути к директории конфигурации
-	configPath := filepath.Join(cwd, "config")
+	configPath := filepath.Join(cwd, "../config")
 
 	// Пути к сертификату и ключу
 	certFile := filepath.Join(configPath, "certs", "server.crt")
@@ -104,11 +102,14 @@ func main() {
 	// Ожидание запуска сервера
 	time.Sleep(2 * time.Second)
 
-	fmt.Println("=== First Program Start ===")
+	fmt.Println("=== Server Started ===")
 
 	// Создание WaitGroup для ожидания завершения периодических проверок
 	var wg sync.WaitGroup
 	wg.Add(1)
+
+	// Идентификатор пользователя (можно изменить на динамический)
+	myUserID := 13
 
 	// Проверка наличия лицензии у пользователя
 	hasLicense, err := licenseChecker.CheckLicense(myUserID)
@@ -198,19 +199,19 @@ func main() {
 					}
 				case <-timeout:
 					fmt.Println("License approval wait time has expired.")
-					// Решить, что делать дальше: выйти из программы или оставить в ограниченном режиме
+					// Решите, что делать дальше: выйти из программы или оставить в ограниченном режиме
 					os.Exit(1)
 				}
 			}
 		}(requestID)
 	} else {
-		fmt.Printf("License found for user %d. The program can run fully.\n", myUserID)
+		fmt.Printf("License found for user %d. The server can run fully.\n", myUserID)
 	}
 
-	fmt.Println("=== Program is running ===")
+	fmt.Println("=== Server is running ===")
 
 	// Ожидание завершения периодических проверок
 	wg.Wait()
 
-	fmt.Println("=== Program Finished ===")
+	fmt.Println("=== Server Finished ===")
 }
