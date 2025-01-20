@@ -87,8 +87,6 @@ func main() {
 	}
 
 	// Генерация или получение публичного ключа пользователя
-	// Здесь предполагается, что публичный ключ уже существует и хранится в файле или переменной
-	// Для примера используем строку "MOCK_PUBLIC_KEY"
 	publicKey := "MOCK_PUBLIC_KEY"
 
 	// Создание WaitGroup для ожидания завершения периодических проверок
@@ -102,6 +100,11 @@ func main() {
 		// Проверяем, есть ли у пользователя активная лицензия
 		hasLicense, err := handlers.CheckLicense(client, serverURL, userID)
 		if err != nil {
+			// Проверяем, является ли ошибка LicenseStatusError с статусом 'rejected'
+			if statusErr, ok := err.(*errors.LicenseStatusError); ok && statusErr.Status == "rejected" {
+				fmt.Println("Your license request has been rejected by the administrator. Please contact the administrator.")
+				return
+			}
 			log.Printf("Failed to check license: %v", err)
 			return
 		}
@@ -111,9 +114,8 @@ func main() {
 			requestID, err := handlers.CreateLicenseRequest(client, serverURL, userID, publicKey)
 			if err != nil {
 				// Проверяем, была ли ошибка из-за существующей заявки
-				if respErr, ok := err.(*errors.LicenseRequestExistsError); ok {
-					log.Printf("License request already exists with ID %d. Waiting for approval...", respErr.RequestID)
-					requestID = respErr.RequestID
+				if reqErr, ok := err.(*errors.LicenseRequestExistsError); ok {
+					log.Printf("License request already exists with ID %d. Waiting for approval...", reqErr.RequestID)
 				} else {
 					log.Printf("Failed to create license request: %v", err)
 					return
@@ -133,24 +135,29 @@ func main() {
 					// Проверяем статус лицензии
 					hasLicenseNow, err := handlers.CheckLicense(client, serverURL, userID)
 					if err != nil {
+						// Проверяем, является ли ошибка LicenseStatusError с статусом 'rejected'
+						if statusErr, ok := err.(*errors.LicenseStatusError); ok && statusErr.Status == "rejected" {
+							fmt.Println("Your license request has been rejected by the administrator. Please contact the administrator.")
+							return
+						}
 						log.Printf("Failed to check license: %v", err)
 						continue
 					}
 					if hasLicenseNow {
-						fmt.Println("License approved! The client can continue.")
+						fmt.Println("License approved! The client can proceed.")
 						// Здесь можно добавить дальнейшую логику работы клиента
 						return
 					} else {
-						log.Println("License still not approved. Continuing to check...")
+						log.Println("The license is still not approved. Continuing to check...")
 					}
 				case <-timeout:
-					fmt.Println("License approval wait time has expired.")
+					fmt.Println("The waiting time for license approval has expired.")
 					// Решите, что делать дальше: выйти из программы или оставить в ограниченном режиме
 					os.Exit(1)
 				}
 			}
 		} else {
-			fmt.Printf("License found for user %d. The client can continue.\n", userID)
+			fmt.Printf("License found for user %d. The client can proceed.\n", userID)
 			// Здесь можно добавить дальнейшую логику работы клиента
 		}
 	}()
