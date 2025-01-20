@@ -4,18 +4,28 @@ import (
 	"LicenseApp/pkg/licensegen"
 	"LicenseApp/pkg/models"
 	"LicenseApp/pkg/security"
+	"database/sql"
 	"fmt"
 	"log"
 )
 
 // Создает заявку на лицензию
 func CreateLicenseRequest(userID int, publicKey string) (int, error) {
+	hasPending, err := HasPendingLicenseRequest(userID)
+	if err != nil {
+		return 0, err
+	}
+	if hasPending {
+		return 0, fmt.Errorf("pending license request already exists for user %d", userID)
+	}
+
 	var newID int
-	err := DB.QueryRow(`
+	err = DB.QueryRow(`
         INSERT INTO license_requests (user_id, public_key, status)
         VALUES ($1, $2, 'pending')
         RETURNING id
     `, userID, publicKey).Scan(&newID)
+
 	if err != nil {
 		return 0, err
 	}
@@ -87,6 +97,7 @@ func RejectLicenseRequest(id int) error {
 	return nil
 }
 
+// Получает лицензию пользователя по его ID
 func GetLicenseByUserID(userID int) (*models.License, error) {
 	row := DB.QueryRow(`
         SELECT id, user_id, license_key, license_signature, status 
@@ -103,4 +114,42 @@ func GetLicenseByUserID(userID int) (*models.License, error) {
 	}
 
 	return &lic, nil
+}
+
+// Проверяет, есть ли у пользователя уже заявка со статусом 'pending'
+func HasPendingLicenseRequest(userID int) (bool, error) {
+	var exists bool
+	query := `
+		SELECT EXISTS (
+			SELECT 1 FROM license_requests
+			WHERE user_id = $1 AND status = 'pending'
+			LIMIT 1
+		)
+	`
+	err := DB.QueryRow(query, userID).Scan(&exists)
+	if err != nil {
+		log.Printf("Error checking pending license request for user %d: %v", userID, err)
+		return false, err
+	}
+	return exists, nil
+}
+
+// Возвращает pending-запрос для пользователя, если он существует
+func GetPendingLicenseRequestByUserID(userID int) (*models.LicenseRequest, error) {
+	var req models.LicenseRequest
+	query := `
+		SELECT id, user_id, public_key, status, created_at
+		FROM license_requests
+		WHERE user_id = $1 AND status = 'pending'
+		LIMIT 1
+	`
+	err := DB.QueryRow(query, userID).Scan(&req.ID, &req.UserID, &req.PublicKey, &req.Status, &req.CreatedAt)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil // Заявка не найдена
+		}
+		log.Printf("Error fetching pending license request for user %d: %v", userID, err)
+		return nil, err
+	}
+	return &req, nil
 }
