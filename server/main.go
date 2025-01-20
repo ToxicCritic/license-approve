@@ -44,7 +44,7 @@ func main() {
 	}
 
 	// Определение пути к директории конфигурации
-	configPath := filepath.Join(cwd, "../config")
+	configPath := filepath.Join(cwd, "../server/config")
 
 	// Пути к сертификату и ключу
 	certFile := filepath.Join(configPath, "certs", "server.crt")
