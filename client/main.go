@@ -86,9 +86,6 @@ func main() {
 		Transport: transport,
 	}
 
-	// Генерация или получение публичного ключа пользователя
-	publicKey := "MOCK_PUBLIC_KEY"
-
 	// Создание WaitGroup для ожидания завершения периодических проверок
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -111,7 +108,7 @@ func main() {
 
 		if !hasLicense {
 			// Создаем заявку на лицензию
-			requestID, err := handlers.CreateLicenseRequest(client, serverURL, userID, publicKey)
+			requestID, err := handlers.CreateLicenseRequest(client, serverURL, userID)
 			if err != nil {
 				// Проверяем, была ли ошибка из-за существующей заявки
 				if reqErr, ok := err.(*errors.LicenseRequestExistsError); ok {
