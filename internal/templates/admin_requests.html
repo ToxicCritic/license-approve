@@ -50,7 +50,7 @@
                 <thead class="table-dark">
                     <tr>
                         <th scope="col">ID</th>
-                        <th scope="col">User ID</th>
+                        <th scope="col">Ключ лицензии</th>
                         <th scope="col">Статус</th>
                         <th scope="col">Создана</th>
                         <th scope="col">Действия</th>
@@ -60,7 +60,7 @@
                     {{range .}}
                     <tr>
                         <td>{{.ID}}</td>
-                        <td>{{.UserID}}</td>
+                        <td>{{.LicenseKey}}</td>
                         <td>
                             {{if eq .Status "pending"}}
                                 <span class="badge bg-warning text-dark">В ожидании</span>

@@ -1,18 +1,20 @@
 // client/main.go
+
 package main
 
 import (
-	"LicenseApp/client/pkg/errors"
-	"LicenseApp/client/pkg/handlers"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
-	"strconv"
 	"sync"
 	"time"
 
+	"LicenseApp/client/pkg/config"
+	"LicenseApp/client/pkg/errors"
+	"LicenseApp/client/pkg/handlers"
+	"LicenseApp/server/pkg/licensegen"
 	"crypto/tls"
 	"crypto/x509"
 
@@ -36,27 +38,37 @@ func main() {
 	// Получение URL сервера из переменных окружения
 	serverURL := os.Getenv("SERVER_URL")
 	if serverURL == "" {
-		serverURL = "https://localhost:8443"
+		serverURL = "https://localhost:8443" // Убедитесь, что это правильный URL вашего сервера
 	}
 
-	// Получение ID пользователя из переменных окружения
-	userIDStr := os.Getenv("USER_ID")
-	if userIDStr == "" {
-		userIDStr = "13"
-	}
-
-	userID, err := strconv.Atoi(userIDStr)
-	if err != nil {
-		log.Fatalf("Invalid USER_ID: %v", err)
-	}
-
-	// Путь к сертификату сервера
+	// Определение пути к файлу конфигурации
 	cwd, err := os.Getwd()
 	if err != nil {
 		log.Fatalf("Error getting current working directory: %v", err)
 	}
-	// Предполагается, что server.crt находится в ../server/config/certs/
-	certPath := filepath.Join(cwd, "../server/config/certs/server.crt")
+	configPath := filepath.Join(cwd, "config.json")
+
+	// Загрузка конфигурации
+	cfg, err := config.LoadConfig(configPath)
+	if err != nil {
+		log.Fatalf("Failed to load config: %v", err)
+	}
+
+	// Если LicenseKey пустой, генерируем новый и сохраняем его
+	if cfg.LicenseKey == "" {
+		cfg.LicenseKey = licensegen.GenerateHexLicenseKey()
+		fmt.Printf("Generated License Key: %s\n", cfg.LicenseKey)
+
+		// Сохраняем новый LicenseKey в конфигурационный файл
+		if err := config.SaveConfig(configPath, cfg); err != nil {
+			log.Fatalf("Failed to save config: %v", err)
+		}
+	} else {
+		fmt.Printf("Using existing License Key: %s\n", cfg.LicenseKey)
+	}
+
+	// Путь к сертификату сервера
+	certPath := filepath.Join(cwd, "../server/config/certs/server.crt") // Убедитесь, что путь корректен
 
 	// Загрузка серверного сертификата
 	caCert, err := os.ReadFile(certPath)
@@ -94,68 +106,79 @@ func main() {
 	go func() {
 		defer wg.Done()
 
-		// Проверяем, есть ли у пользователя активная лицензия
-		hasLicense, err := handlers.CheckLicense(client, serverURL, userID)
+		// Проверяем статус лицензии
+		hasLicense, message, err := handlers.CheckLicense(client, serverURL, cfg.LicenseKey)
 		if err != nil {
-			// Проверяем, является ли ошибка LicenseStatusError с статусом 'rejected'
-			if statusErr, ok := err.(*errors.LicenseStatusError); ok && statusErr.Status == "rejected" {
-				fmt.Println("Your license request has been rejected by the administrator. Please contact the administrator.")
-				return
-			}
+			// Обработка ошибки, например, вывод сообщения и выход из приложения
 			log.Printf("Failed to check license: %v", err)
 			return
 		}
 
-		if !hasLicense {
-			// Создаем заявку на лицензию
-			requestID, err := handlers.CreateLicenseRequest(client, serverURL, userID)
-			if err != nil {
-				// Проверяем, была ли ошибка из-за существующей заявки
-				if reqErr, ok := err.(*errors.LicenseRequestExistsError); ok {
-					log.Printf("License request already exists with ID %d. Waiting for approval...", reqErr.RequestID)
-				} else {
-					log.Printf("Failed to create license request: %v", err)
-					return
-				}
-			} else {
-				log.Printf("License request #%d created. Waiting for approval...", requestID)
+		if hasLicense {
+			fmt.Println("License is active. The client can proceed.")
+			// Здесь можно добавить дальнейшую логику работы клиента
+			return
+		} else {
+			// Обработка различных сообщений
+			switch message {
+			case "License is active.":
+				fmt.Println("License is active. The client can proceed.")
+				return
+			case "License request is pending.":
+				log.Println("License request is pending. Waiting for approval...")
+			case "License request has been rejected.":
+				log.Println("Your license request has been rejected by the administrator. Please contact support.")
+				return
+			default:
+				log.Println("License is not active. Creating a new license request...")
 			}
+		}
 
-			ticker := time.NewTicker(checkInterval)
-			defer ticker.Stop()
-
-			timeout := time.After(maxCheckDuration)
-
-			for {
-				select {
-				case <-ticker.C:
-					// Проверяем статус лицензии
-					hasLicenseNow, err := handlers.CheckLicense(client, serverURL, userID)
-					if err != nil {
-						// Проверяем, является ли ошибка LicenseStatusError с статусом 'rejected'
-						if statusErr, ok := err.(*errors.LicenseStatusError); ok && statusErr.Status == "rejected" {
-							fmt.Println("Your license request has been rejected by the administrator. Please contact the administrator.")
-							return
-						}
-						log.Printf("Failed to check license: %v", err)
-						continue
-					}
-					if hasLicenseNow {
-						fmt.Println("License approved! The client can proceed.")
-						// Здесь можно добавить дальнейшую логику работы клиента
-						return
-					} else {
-						log.Println("The license is still not approved. Continuing to check...")
-					}
-				case <-timeout:
-					fmt.Println("The waiting time for license approval has expired.")
-					// Решите, что делать дальше: выйти из программы или оставить в ограниченном режиме
-					os.Exit(1)
-				}
+		// Создаем заявку на лицензию
+		requestID, err := handlers.CreateLicenseRequest(client, serverURL, cfg.LicenseKey)
+		if err != nil {
+			// Проверяем, была ли ошибка из-за существующей заявки
+			if reqErr, ok := err.(*errors.LicenseRequestExistsError); ok {
+				log.Printf("License request already exists with ID %d. Waiting for approval...", reqErr.RequestID)
+			} else {
+				log.Printf("Failed to create license request: %v", err)
+				return
 			}
 		} else {
-			fmt.Printf("License found for user %d. The client can proceed.\n", userID)
-			// Здесь можно добавить дальнейшую логику работы клиента
+			log.Printf("License request #%d created. Waiting for approval...", requestID)
+		}
+
+		ticker := time.NewTicker(checkInterval)
+		defer ticker.Stop()
+
+		timeout := time.After(maxCheckDuration)
+
+		for {
+			select {
+			case <-ticker.C:
+				// Проверяем статус лицензии
+				hasLicenseNow, message, err := handlers.CheckLicense(client, serverURL, cfg.LicenseKey)
+				if err != nil {
+					// Проверяем, является ли ошибка LicenseRejectedError
+					if _, ok := err.(*errors.LicenseRejectedError); ok {
+						fmt.Println("Your license request has been rejected by the administrator. Please contact support.")
+						return
+					}
+					log.Printf("Failed to check license: %v", err)
+					continue
+				}
+				if hasLicenseNow {
+					fmt.Println("License approved! The client can proceed.")
+					// Здесь можно добавить дальнейшую логику работы клиента
+					return
+				} else {
+					log.Printf("License status: %s. Continuing to check...", message)
+				}
+			case <-timeout:
+				fmt.Println("The waiting time for license approval has expired.")
+				// Решите, что делать дальше: выйти из программы или оставить в ограниченном режиме
+				os.Exit(1)
+			}
 		}
 	}()
 
