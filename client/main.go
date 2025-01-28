@@ -14,11 +14,10 @@ import (
 	"LicenseApp/client/pkg/config"
 	"LicenseApp/client/pkg/errors"
 	"LicenseApp/client/pkg/handlers"
-	"LicenseApp/server/pkg/licensegen"
+	"LicenseApp/client/pkg/utils"
+
 	"crypto/tls"
 	"crypto/x509"
-
-	"github.com/joho/godotenv"
 )
 
 const (
@@ -28,18 +27,6 @@ const (
 
 func main() {
 	fmt.Println("=== Client Started ===")
-
-	// Загрузка переменных окружения из файла .env
-	err := godotenv.Load()
-	if err != nil {
-		log.Println("No .env file found. Using default configuration.")
-	}
-
-	// Получение URL сервера из переменных окружения
-	serverURL := os.Getenv("SERVER_URL")
-	if serverURL == "" {
-		serverURL = "https://localhost:8443" // Убедитесь, что это правильный URL вашего сервера
-	}
 
 	// Определение пути к файлу конфигурации
 	cwd, err := os.Getwd()
@@ -54,9 +41,18 @@ func main() {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
+	// Проверка наличия адреса сервера лицензий
+	if cfg.LicenseServerURL == "" {
+		log.Fatal("License server URL is not set in config.json")
+	}
+
 	// Если LicenseKey пустой, генерируем новый и сохраняем его
 	if cfg.LicenseKey == "" {
-		cfg.LicenseKey = licensegen.GenerateHexLicenseKey()
+		licenseKey, err := utils.GenerateHexLicenseKey()
+		if err != nil {
+			log.Fatalf("Failed to generate license key: %v", err)
+		}
+		cfg.LicenseKey = licenseKey
 		fmt.Printf("Generated License Key: %s\n", cfg.LicenseKey)
 
 		// Сохраняем новый LicenseKey в конфигурационный файл
@@ -107,7 +103,7 @@ func main() {
 		defer wg.Done()
 
 		// Проверяем статус лицензии
-		hasLicense, message, err := handlers.CheckLicense(client, serverURL, cfg.LicenseKey)
+		hasLicense, message, err := handlers.CheckLicense(client, cfg.LicenseServerURL, cfg.LicenseKey)
 		if err != nil {
 			// Обработка ошибки, например, вывод сообщения и выход из приложения
 			log.Printf("Failed to check license: %v", err)
@@ -135,7 +131,7 @@ func main() {
 		}
 
 		// Создаем заявку на лицензию
-		requestID, err := handlers.CreateLicenseRequest(client, serverURL, cfg.LicenseKey)
+		requestID, err := handlers.CreateLicenseRequest(client, cfg.LicenseServerURL, cfg.LicenseKey)
 		if err != nil {
 			// Проверяем, была ли ошибка из-за существующей заявки
 			if reqErr, ok := err.(*errors.LicenseRequestExistsError); ok {
@@ -157,7 +153,7 @@ func main() {
 			select {
 			case <-ticker.C:
 				// Проверяем статус лицензии
-				hasLicenseNow, message, err := handlers.CheckLicense(client, serverURL, cfg.LicenseKey)
+				hasLicenseNow, message, err := handlers.CheckLicense(client, cfg.LicenseServerURL, cfg.LicenseKey)
 				if err != nil {
 					// Проверяем, является ли ошибка LicenseRejectedError
 					if _, ok := err.(*errors.LicenseRejectedError); ok {
