@@ -3,7 +3,6 @@ package main
 
 import (
 	"LicenseApp/server/pkg/db"
-	"LicenseApp/server/pkg/handlers"
 	"LicenseApp/server/pkg/security"
 	"log"
 	"net/http"
@@ -27,11 +26,11 @@ func main() {
 	}
 
 	// Регистрация HTTP-обработчиков
-	http.HandleFunc("/admin/license-requests", handlers.GetLicenseRequestsHandler)
-	http.HandleFunc("/admin/approve-license", handlers.ApproveLicenseRequestHandler)
-	http.HandleFunc("/admin/reject-license", handlers.RejectLicenseRequestHandler)
-	http.HandleFunc("/api/check-license", handlers.CheckLicenseHandler)
-	http.HandleFunc("/api/create-license-request", handlers.CreateLicenseRequestHandler)
+	http.HandleFunc("/admin/license-requests", db.GetLicenseRequestsHandler)
+	http.HandleFunc("/admin/approve-license", db.ApproveLicenseRequestHandler)
+	http.HandleFunc("/admin/reject-license", db.RejectLicenseRequestHandler)
+	http.HandleFunc("/api/check-license", db.CheckLicenseHandler)
+	http.HandleFunc("/api/create-license-request", db.CreateLicenseRequestHandler)
 
 	// Пути к сертификату и ключу
 	certFile := filepath.Join(configPath, "certs", "server.crt")
