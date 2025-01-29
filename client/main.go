@@ -18,6 +18,8 @@ import (
 
 	"crypto/tls"
 	"crypto/x509"
+
+	"github.com/joho/godotenv"
 )
 
 const (
@@ -27,6 +29,18 @@ const (
 
 func main() {
 	fmt.Println("=== Client Started ===")
+
+	// Загрузка переменных окружения из .env файла
+	err := loadEnv()
+	if err != nil {
+		log.Fatalf("Error loading .env file: %v", err)
+	}
+
+	// Чтение LicenseServerURL из переменных окружения
+	licenseServerURL := os.Getenv("LICENSE_SERVER_URL")
+	if licenseServerURL == "" {
+		log.Fatal("LICENSE_SERVER_URL is not set in environment")
+	}
 
 	// Определение пути к файлу конфигурации
 	cwd, err := os.Getwd()
@@ -39,11 +53,6 @@ func main() {
 	cfg, err := config.LoadConfig(configPath)
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
-	}
-
-	// Проверка наличия адреса сервера лицензий
-	if cfg.LicenseServerURL == "" {
-		log.Fatal("License server URL is not set in config.json")
 	}
 
 	// Если LicenseKey пустой, генерируем новый и сохраняем его
@@ -64,7 +73,7 @@ func main() {
 	}
 
 	// Путь к сертификату сервера
-	certPath := filepath.Join(cwd, "../server/config/certs/server.crt") // Убедитесь, что путь корректен
+	certPath := filepath.Join(cwd, "../server/config/certs/server.crt")
 
 	// Загрузка серверного сертификата
 	caCert, err := os.ReadFile(certPath)
@@ -103,7 +112,7 @@ func main() {
 		defer wg.Done()
 
 		// Проверяем статус лицензии
-		hasLicense, message, err := handlers.CheckLicense(client, cfg.LicenseServerURL, cfg.LicenseKey)
+		hasLicense, message, err := handlers.CheckLicense(client, licenseServerURL, cfg.LicenseKey)
 		if err != nil {
 			// Обработка ошибки, например, вывод сообщения и выход из приложения
 			log.Printf("Failed to check license: %v", err)
@@ -131,7 +140,7 @@ func main() {
 		}
 
 		// Создаем заявку на лицензию
-		requestID, err := handlers.CreateLicenseRequest(client, cfg.LicenseServerURL, cfg.LicenseKey)
+		requestID, err := handlers.CreateLicenseRequest(client, licenseServerURL, cfg.LicenseKey)
 		if err != nil {
 			// Проверяем, была ли ошибка из-за существующей заявки
 			if reqErr, ok := err.(*errors.LicenseRequestExistsError); ok {
@@ -153,7 +162,7 @@ func main() {
 			select {
 			case <-ticker.C:
 				// Проверяем статус лицензии
-				hasLicenseNow, message, err := handlers.CheckLicense(client, cfg.LicenseServerURL, cfg.LicenseKey)
+				hasLicenseNow, message, err := handlers.CheckLicense(client, licenseServerURL, cfg.LicenseKey)
 				if err != nil {
 					// Проверяем, является ли ошибка LicenseRejectedError
 					if _, ok := err.(*errors.LicenseRejectedError); ok {
@@ -184,4 +193,14 @@ func main() {
 	wg.Wait()
 
 	fmt.Println("=== Client Finished ===")
+}
+
+// loadEnv загружает переменные окружения из файла .env
+func loadEnv() error {
+	// Используем пакет godotenv для загрузки .env файла
+	err := godotenv.Load()
+	if err != nil {
+		log.Println("No .env file found. Using environment variables.")
+	}
+	return err
 }

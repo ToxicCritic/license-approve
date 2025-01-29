@@ -1,38 +1,67 @@
 // server/main.go
+
 package main
 
 import (
+	"LicenseApp/server/pkg/auth"
 	"LicenseApp/server/pkg/db"
 	"LicenseApp/server/pkg/security"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
+
+	"github.com/gorilla/mux"
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	// Загрузка переменных окружения
+	err := loadEnv()
+	if err != nil {
+		log.Fatalf("Error loading environment variables: %v", err)
+	}
+
+	// Инициализация OAuth2 конфигурации
+	auth.InitOAuthConfig()
+
+	// Инициализация хранилища сессий
+	auth.SetupSessionStore()
+
 	// Инициализация базы данных
 	db.Init()
 	db.Migrate()
 
-	// Загрузка ключей для подписания лицензий
-	configPath := filepath.Join("config")
+	// Настройка безопасности (например, загрузка ключей для JWT или других механизмов)
+	configPath := filepath.Join("server", "config")
 	privateKeyFile := filepath.Join(configPath, "keys", "private_key.pem")
 	publicKeyFile := filepath.Join(configPath, "keys", "public_key.pem")
 
-	err := security.LoadKeys(privateKeyFile, publicKeyFile)
+	err = security.LoadKeys(privateKeyFile, publicKeyFile)
 	if err != nil {
 		log.Fatalf("Error loading security keys: %v", err)
 	}
 
-	// Регистрация HTTP-обработчиков
-	http.HandleFunc("/admin/license-requests", db.GetLicenseRequestsHandler)
-	http.HandleFunc("/admin/approve-license", db.ApproveLicenseRequestHandler)
-	http.HandleFunc("/admin/reject-license", db.RejectLicenseRequestHandler)
-	http.HandleFunc("/api/check-license", db.CheckLicenseHandler)
-	http.HandleFunc("/api/create-license-request", db.CreateLicenseRequestHandler)
+	// Создание маршрутизатора
+	router := mux.NewRouter()
 
-	// Пути к сертификату и ключу
+	// Маршруты аутентификации
+	router.HandleFunc("/auth/login", auth.LoginHandler).Methods("GET")
+	router.HandleFunc("/oauth-cb", auth.CallbackHandler).Methods("GET")
+	router.HandleFunc("/auth/logout", auth.LogoutHandler).Methods("GET")
+
+	// Применение middleware к административным маршрутам
+	adminRouter := router.PathPrefix("/admin").Subrouter()
+	adminRouter.Use(auth.AuthMiddleware())
+	adminRouter.HandleFunc("/license-requests", db.GetLicenseRequestsHandler).Methods("GET")
+	adminRouter.HandleFunc("/approve-license", db.ApproveLicenseRequestHandler).Methods("POST")
+	adminRouter.HandleFunc("/reject-license", db.RejectLicenseRequestHandler).Methods("POST")
+
+	// Открытые маршруты (не требуют аутентификации)
+	router.HandleFunc("/api/check-license", db.CheckLicenseHandler).Methods("GET")
+	router.HandleFunc("/api/create-license-request", db.CreateLicenseRequestHandler).Methods("POST")
+
+	// Настройка путей к сертификатам и ключам для HTTPS
 	certFile := filepath.Join(configPath, "certs", "server.crt")
 	keyFile := filepath.Join(configPath, "certs", "server.key")
 	log.Println("Certificate file path:", certFile)
@@ -51,10 +80,19 @@ func main() {
 		log.Fatalf("Error checking key file: %v", err)
 	}
 
-	// Запуск HTTPS-сервера
+	// Запуск HTTPS-сервера с использованием маршрутизатора
 	log.Println("HTTPS server started on port 8443...")
-	err = http.ListenAndServeTLS(":8443", certFile, keyFile, nil)
+	err = http.ListenAndServeTLS(":8443", certFile, keyFile, router)
 	if err != nil {
 		log.Fatalf("Error starting HTTPS server: %v", err)
 	}
+}
+
+// loadEnv загружает переменные окружения из файла .env
+func loadEnv() error {
+	err := godotenv.Load()
+	if err != nil {
+		log.Println("No .env file found. Using environment variables.")
+	}
+	return nil
 }
