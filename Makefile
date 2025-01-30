@@ -1,115 +1,124 @@
-# Makefile
+# Makefile (расположен в корне проекта licence-approval)
 
 # Binary names
-SERVER_BINARY=server
 CLIENT_BINARY=client
+SERVER_BINARY=server
 MOCK_OAUTH_BINARY=mock-oauth-server
 
 # Source directories
-SERVER_DIR=server
 CLIENT_DIR=client
+SERVER_DIR=server
 MOCK_OAUTH_DIR=mock-oauth-server
-COMMON_DIR=common
 
 # Build directories
 BUILD_DIR=build
-SERVER_BUILD_DIR=$(BUILD_DIR)/server
 CLIENT_BUILD_DIR=$(BUILD_DIR)/client
+SERVER_BUILD_DIR=$(BUILD_DIR)/server
 MOCK_OAUTH_BUILD_DIR=$(BUILD_DIR)/mock-oauth-server
 
-# Go build flags (e.g., for optimizations)
+# Go build flags
 GO_FLAGS=-ldflags="-s -w"
 
-# Suppress command echoing for cleaner output
-.SILENT:
+# Declare phony targets
+.PHONY: all build build-client build-server build-mock-oauth run run-client run-server run-mock-oauth clean help init-work
 
-# Declare phony targets to avoid conflicts with files of the same name
-.PHONY: all build build-server build-client build-mock-oauth run run-server run-client run-mock-oauth clean help
-
-# Default target: display help
+## ===== Default (help) =====
 all: help
 
-# Help target: displays available Makefile commands
+## ===== Help =====
 help:
-	@echo "Makefile for LICENCE-APPROVAL Project"
+	@echo "============================================================"
+	@echo "Makefile for multi-module Go project (client, server, mock-oauth-server)"
 	@echo ""
-	@echo "Available targets:"
-	@echo "  make build            Build all services (server, client, mock-oauth-server)"
-	@echo "  make run              Build and run all services"
-	@echo "  make build-server     Build the server service"
-	@echo "  make run-server       Build and run the server service"
-	@echo "  make build-client     Build the client service"
-	@echo "  make run-client       Build and run the client service"
-	@echo "  make build-mock-oauth Build the mock-oauth-server service"
-	@echo "  make run-mock-oauth   Build and run the mock-oauth-server service"
-	@echo "  make clean            Clean build artifacts"
-	@echo "  make help             Display this help message"
-	@echo ""
+	@echo "Targets:"
+	@echo "  init-work         Initialize or update go.work (workspace)"
+	@echo "  build             Build all modules"
+	@echo "  build-client      Build the client module"
+	@echo "  build-server      Build the server module"
+	@echo "  build-mock-oauth  Build the mock OAuth2.0 server module"
+	@echo "  run               Build and run all modules concurrently"
+	@echo "  run-client        Build and run only client"
+	@echo "  run-server        Build and run only server"
+	@echo "  run-mock-oauth    Build and run only mock-oauth-server"
+	@echo "  clean             Remove build artifacts"
+	@echo "  help              Show this help message"
+	@echo "============================================================"
 
-# Build target: builds all services
-build: build-server build-client build-mock-oauth
+## ===== init-work (go.work) =====
+init-work:
+	@echo "[WORK] Initializing go.work with ./client, ./server, ./mock-oauth-server..."
+	go work init ./$(CLIENT_DIR) ./$(SERVER_DIR) ./$(MOCK_OAUTH_DIR)
+	@echo "go.work has been (re)initialized:"
+	@cat go.work
 
-# Build-server target: builds the server service and copies configuration files
-build-server:
-	@echo "Building the server service..."
-	mkdir -p $(SERVER_BUILD_DIR)
-	cd $(SERVER_DIR) && go build $(GO_FLAGS) -o ../../$(SERVER_BUILD_DIR)/$(SERVER_BINARY) main.go
-	@echo "Copying configuration files to build/server..."
-	cp -r $(SERVER_DIR)/config $(SERVER_BUILD_DIR)/
+## ===== Build all =====
+build: build-client build-server build-mock-oauth
 
-# Build-client target: builds the client service
+## ===== Build client =====
 build-client:
-	@echo "Building the client service..."
+	@echo "[CLIENT] Building the client module..."
 	mkdir -p $(CLIENT_BUILD_DIR)
-	cd $(CLIENT_DIR) && go build $(GO_FLAGS) -o ../../$(CLIENT_BUILD_DIR)/$(CLIENT_BINARY) main.go
+	go build $(GO_FLAGS) -o $(CLIENT_BUILD_DIR)/$(CLIENT_BINARY) ./$(CLIENT_DIR)
+	@echo "[CLIENT] Copying config.json..."
+	cp $(CLIENT_DIR)/config.json $(CLIENT_BUILD_DIR)/ || true
+	@echo "[CLIENT] Built client -> $(CLIENT_BUILD_DIR)/$(CLIENT_BINARY)"
 
-# Build-mock-oauth target: builds the mock-oauth-server service
+## ===== Build server =====
+build-server:
+	@echo "[SERVER] Building the server module..."
+	mkdir -p $(SERVER_BUILD_DIR)
+	go build $(GO_FLAGS) -o $(SERVER_BUILD_DIR)/$(SERVER_BINARY) ./$(SERVER_DIR)
+
+	@echo "[SERVER] Copying keys..."
+	mkdir -p $(SERVER_BUILD_DIR)/config/keys
+	cp server/config/keys/private_key.pem $(SERVER_BUILD_DIR)/config/keys/ || true
+	cp server/config/keys/public_key.pem  $(SERVER_BUILD_DIR)/config/keys/ || true
+
+	@echo "[SERVER] Built server -> $(SERVER_BUILD_DIR)/$(SERVER_BINARY)"
+
+## ===== Build mock-oauth-server =====
 build-mock-oauth:
-	@echo "Building the mock-oauth-server service..."
+	@echo "[OAUTH] Building the mock OAuth2.0 server..."
 	mkdir -p $(MOCK_OAUTH_BUILD_DIR)
-	cd $(MOCK_OAUTH_DIR) && go build $(GO_FLAGS) -o ../../$(MOCK_OAUTH_BUILD_DIR)/$(MOCK_OAUTH_BINARY) main.go
+	go build $(GO_FLAGS) -o $(MOCK_OAUTH_BUILD_DIR)/$(MOCK_OAUTH_BINARY) ./$(MOCK_OAUTH_DIR)
 
-# Run target: builds and runs all services
+	@echo "[OAUTH] Copying config.json and certs..."
+	mkdir -p $(MOCK_OAUTH_BUILD_DIR)/certs
+	cp $(MOCK_OAUTH_DIR)/config.json $(MOCK_OAUTH_BUILD_DIR)/ || true
+	cp $(MOCK_OAUTH_DIR)/certs/mock-oauth.crt $(MOCK_OAUTH_BUILD_DIR)/certs/ || true
+	cp $(MOCK_OAUTH_DIR)/certs/mock-oauth.key $(MOCK_OAUTH_BUILD_DIR)/certs/ || true
+
+	@echo "[OAUTH] Built mock-oauth-server -> $(MOCK_OAUTH_BUILD_DIR)/$(MOCK_OAUTH_BINARY)"
+
+## ===== Run all =====
 run: build
-	@echo "Starting all services..."
-	# Start server in the background
-	( cd $(SERVER_BUILD_DIR) && ./$(SERVER_BINARY) ) &
-	SERVER_PID=$!
-	@echo "Server started with PID $$SERVER_PID"
-
-	# Start mock-oauth-server in the background
-	( cd $(MOCK_OAUTH_BUILD_DIR) && ./$(MOCK_OAUTH_BINARY) ) &
+	@echo "[RUN] Launching all services concurrently..."
+	$(MOCK_OAUTH_BUILD_DIR)/$(MOCK_OAUTH_BINARY) &
 	MOCK_OAUTH_PID=$!
-	@echo "Mock OAuth Server started with PID $$MOCK_OAUTH_PID"
-
-	# Wait briefly to ensure the server starts before the client attempts to connect
-	sleep 2
-
-	# Start client in the background
-	( cd $(CLIENT_BUILD_DIR) && ./$(CLIENT_BINARY) ) &
+	$(SERVER_BUILD_DIR)/$(SERVER_BINARY) &
+	SERVER_PID=$!
+	$(CLIENT_BUILD_DIR)/$(CLIENT_BINARY) &
 	CLIENT_PID=$!
-	@echo "Client started with PID $$CLIENT_PID"
+	@echo "[RUN] All services launched in background. Press Ctrl+C to stop."
+	wait $(MOCK_OAUTH_PID) $(SERVER_PID) $(CLIENT_PID)
 
-	# Wait for all services to finish
-	wait $$SERVER_PID $$MOCK_OAUTH_PID $$CLIENT_PID
-
-# Run-server target: builds and runs only the server service
-run-server: build-server
-	@echo "Starting the server service..."
-	cd $(SERVER_BUILD_DIR) && ./$(SERVER_BINARY)
-
-# Run-client target: builds and runs only the client service
+## ===== Run client only =====
 run-client: build-client
-	@echo "Starting the client service..."
+	@echo "[RUN-CLIENT] Launching client in current terminal..."
 	cd $(CLIENT_BUILD_DIR) && ./$(CLIENT_BINARY)
 
-# Run-mock-oauth target: builds and runs only the mock-oauth-server service
+## ===== Run server only =====
+run-server: build-server
+	@echo "[RUN-SERVER] Launching server in current terminal..."
+	cd $(SERVER_BUILD_DIR) && ./$(SERVER_BINARY)
+
+## ===== Run mock-oauth-server only =====
 run-mock-oauth: build-mock-oauth
-	@echo "Starting the mock-oauth-server service..."
+	@echo "[RUN-OAUTH] Launching mock-oauth-server in current terminal..."
 	cd $(MOCK_OAUTH_BUILD_DIR) && ./$(MOCK_OAUTH_BINARY)
 
-# Clean target: removes build artifacts
+## ===== Clean =====
 clean:
-	@echo "Cleaning build artifacts..."
+	@echo "[CLEAN] Removing build artifacts..."
 	rm -rf $(BUILD_DIR)
-	@echo "Clean completed."
+	@echo "[CLEAN] Done."
