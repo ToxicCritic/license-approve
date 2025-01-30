@@ -11,10 +11,11 @@ import (
 	"sync"
 	"time"
 
-	"LicenseApp/client/pkg/config"
-	"LicenseApp/client/pkg/errors"
-	"LicenseApp/client/pkg/handlers"
-	"LicenseApp/client/pkg/utils"
+	"example.com/licence-approval/client/pkg/config"
+	"example.com/licence-approval/client/pkg/handlers"
+	"example.com/licence-approval/client/pkg/utils"
+
+	"example.com/licence-approval/client/pkg/errors"
 
 	"crypto/tls"
 	"crypto/x509"

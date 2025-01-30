@@ -3,41 +3,39 @@
 package main
 
 import (
-	"LicenseApp/server/pkg/auth"
-	"LicenseApp/server/pkg/db"
-	"LicenseApp/server/pkg/security"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
-	"path/filepath"
+
+	"example.com/licence-approval/server/config"
+	"example.com/licence-approval/server/pkg/auth"
+	"example.com/licence-approval/server/pkg/db"
+	"example.com/licence-approval/server/pkg/security"
 
 	"github.com/gorilla/mux"
-	"github.com/joho/godotenv"
+	"github.com/spf13/viper"
 )
 
 func main() {
-	// Загрузка переменных окружения
-	err := loadEnv()
+	// Загрузка конфигурации
+	cfg, err := loadConfig()
 	if err != nil {
-		log.Fatalf("Error loading environment variables: %v", err)
+		log.Fatalf("Error loading configuration: %v", err)
 	}
 
 	// Инициализация OAuth2 конфигурации
-	auth.InitOAuthConfig()
+	auth.InitOAuthConfig(cfg)
 
 	// Инициализация хранилища сессий
-	auth.SetupSessionStore()
+	auth.SetupSessionStore(cfg)
 
 	// Инициализация базы данных
 	db.Init()
 	db.Migrate()
 
 	// Настройка безопасности (например, загрузка ключей для JWT или других механизмов)
-	configPath := filepath.Join("server", "config")
-	privateKeyFile := filepath.Join(configPath, "keys", "private_key.pem")
-	publicKeyFile := filepath.Join(configPath, "keys", "public_key.pem")
-
-	err = security.LoadKeys(privateKeyFile, publicKeyFile)
+	err = security.LoadKeys(cfg.PrivateKeyPath, cfg.PublicKeyPath)
 	if err != nil {
 		log.Fatalf("Error loading security keys: %v", err)
 	}
@@ -62,8 +60,8 @@ func main() {
 	router.HandleFunc("/api/create-license-request", db.CreateLicenseRequestHandler).Methods("POST")
 
 	// Настройка путей к сертификатам и ключам для HTTPS
-	certFile := filepath.Join(configPath, "certs", "server.crt")
-	keyFile := filepath.Join(configPath, "certs", "server.key")
+	certFile := cfg.CertFile
+	keyFile := cfg.KeyFile
 	log.Println("Certificate file path:", certFile)
 	log.Println("Key file path:", keyFile)
 
@@ -88,11 +86,33 @@ func main() {
 	}
 }
 
-// loadEnv загружает переменные окружения из файла .env
-func loadEnv() error {
-	err := godotenv.Load()
-	if err != nil {
+// loadConfig загружает конфигурацию с использованием viper
+func loadConfig() (*config.Config, error) {
+	viper.SetConfigName(".env") // имя файла конфигурации (без расширения)
+	viper.SetConfigType("env")  // тип файла конфигурации
+	viper.AddConfigPath(".")    // путь к файлу конфигурации
+
+	// Загрузка переменных окружения
+	viper.AutomaticEnv()
+
+	// Чтение конфигурационного файла
+	if err := viper.ReadInConfig(); err != nil {
 		log.Println("No .env file found. Using environment variables.")
 	}
-	return nil
+
+	// Считывание конфигурации в структуру
+	var cfg config.Config
+	if err := viper.Unmarshal(&cfg); err != nil {
+		return nil, fmt.Errorf("unable to decode into struct: %w", err)
+	}
+
+	// Проверка обязательных переменных
+	if cfg.OAuthClientID == "" || cfg.OAuthClientSecret == "" || cfg.OAuthRedirectURL == "" ||
+		cfg.OAuthAuthURL == "" || cfg.OAuthTokenURL == "" || cfg.SessionSecret == "" ||
+		cfg.OAuthStateSecret == "" || cfg.PrivateKeyPath == "" || cfg.PublicKeyPath == "" ||
+		cfg.CertFile == "" || cfg.KeyFile == "" {
+		return nil, fmt.Errorf("missing required configuration parameters")
+	}
+
+	return &cfg, nil
 }
