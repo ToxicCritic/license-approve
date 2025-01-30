@@ -19,6 +19,7 @@ import (
 func main() {
 	// Загрузка конфигурации (через viper, .env лежит рядом с бинарником)
 	cfg, err := loadConfigSameDirAsBinary()
+
 	if err != nil {
 		log.Fatalf("Error loading configuration: %v", err)
 	}
@@ -66,18 +67,19 @@ func main() {
 
 	// Проверка сертификата и ключа
 	if _, err := os.Stat(certFile); os.IsNotExist(err) {
-		log.Fatalf("Certificate not found at path: %s", certFile)
+		log.Fatalf("Certificate not found in directory: %s", certFile)
 	} else if err != nil {
 		log.Fatalf("Error checking certificate file: %v", err)
 	}
 	if _, err := os.Stat(keyFile); os.IsNotExist(err) {
-		log.Fatalf("Key not found at path: %s", keyFile)
+		log.Fatalf("Key not found in directory: %s", keyFile)
 	} else if err != nil {
-		log.Fatalf("Error checking key file: %v", err)
+		log.Fatalf("Error checking key: %v", err)
 	}
 
 	// Запуск HTTPS-сервера
 	log.Println("HTTPS server started on port 8443...")
+
 	err = http.ListenAndServeTLS(":8443", certFile, keyFile, router)
 	if err != nil {
 		log.Fatalf("Error starting HTTPS server: %v", err)

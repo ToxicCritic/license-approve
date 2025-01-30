@@ -36,7 +36,9 @@ mock-oauth-server/config.json
 # Личные данные, логины, пароли
 *.env
 .env.*
+
 .envright
+
 
 # Логи и временные файлы
 *.log
