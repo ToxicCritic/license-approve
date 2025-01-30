@@ -3,6 +3,8 @@
 package main
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"log"
 	"net/http"
@@ -15,11 +17,6 @@ import (
 	"LicenseApp/client/pkg/errors"
 	"LicenseApp/client/pkg/handlers"
 	"LicenseApp/client/pkg/utils"
-
-	"crypto/tls"
-	"crypto/x509"
-
-	"github.com/joho/godotenv"
 )
 
 const (
@@ -30,29 +27,10 @@ const (
 func main() {
 	fmt.Println("=== Client Started ===")
 
-	// Загрузка переменных окружения из .env файла
-	err := loadEnv()
-	if err != nil {
-		log.Fatalf("Error loading .env file: %v", err)
-	}
-
-	// Чтение LicenseServerURL из переменных окружения
-	licenseServerURL := os.Getenv("LICENSE_SERVER_URL")
-	if licenseServerURL == "" {
-		log.Fatal("LICENSE_SERVER_URL is not set in environment")
-	}
-
-	// Определение пути к файлу конфигурации
-	cwd, err := os.Getwd()
-	if err != nil {
-		log.Fatalf("Error getting current working directory: %v", err)
-	}
-	configPath := filepath.Join(cwd, "config.json")
-
 	// Загрузка конфигурации
-	cfg, err := config.LoadConfig(configPath)
+	cfg, err := config.LoadConfig("config.json")
 	if err != nil {
-		log.Fatalf("Failed to load config: %v", err)
+		log.Fatalf("Error loading configuration: %v", err)
 	}
 
 	// Если LicenseKey пустой, генерируем новый и сохраняем его
@@ -65,7 +43,7 @@ func main() {
 		fmt.Printf("Generated License Key: %s\n", cfg.LicenseKey)
 
 		// Сохраняем новый LicenseKey в конфигурационный файл
-		if err := config.SaveConfig(configPath, cfg); err != nil {
+		if err := config.SaveConfig("config.json", cfg); err != nil {
 			log.Fatalf("Failed to save config: %v", err)
 		}
 	} else {
@@ -73,7 +51,7 @@ func main() {
 	}
 
 	// Путь к сертификату сервера
-	certPath := filepath.Join(cwd, "../server/config/certs/server.crt")
+	certPath := filepath.Join(getCWD(), "../server/config/certs/server.crt")
 
 	// Загрузка серверного сертификата
 	caCert, err := os.ReadFile(certPath)
@@ -112,7 +90,7 @@ func main() {
 		defer wg.Done()
 
 		// Проверяем статус лицензии
-		hasLicense, message, err := handlers.CheckLicense(client, licenseServerURL, cfg.LicenseKey)
+		hasLicense, message, err := handlers.CheckLicense(client, cfg.LicenseServerURL, cfg.LicenseKey)
 		if err != nil {
 			// Обработка ошибки, например, вывод сообщения и выход из приложения
 			log.Printf("Failed to check license: %v", err)
@@ -140,7 +118,7 @@ func main() {
 		}
 
 		// Создаем заявку на лицензию
-		requestID, err := handlers.CreateLicenseRequest(client, licenseServerURL, cfg.LicenseKey)
+		requestID, err := handlers.CreateLicenseRequest(client, cfg.LicenseServerURL, cfg.LicenseKey)
 		if err != nil {
 			// Проверяем, была ли ошибка из-за существующей заявки
 			if reqErr, ok := err.(*errors.LicenseRequestExistsError); ok {
@@ -162,7 +140,7 @@ func main() {
 			select {
 			case <-ticker.C:
 				// Проверяем статус лицензии
-				hasLicenseNow, message, err := handlers.CheckLicense(client, licenseServerURL, cfg.LicenseKey)
+				hasLicenseNow, message, err := handlers.CheckLicense(client, cfg.LicenseServerURL, cfg.LicenseKey)
 				if err != nil {
 					// Проверяем, является ли ошибка LicenseRejectedError
 					if _, ok := err.(*errors.LicenseRejectedError); ok {
@@ -195,12 +173,21 @@ func main() {
 	fmt.Println("=== Client Finished ===")
 }
 
-// loadEnv загружает переменные окружения из файла .env
-func loadEnv() error {
-	// Используем пакет godotenv для загрузки .env файла
-	err := godotenv.Load()
+// loadConfig загружает конфигурацию из указанного JSON файла
+func loadConfig(path string) (*config.Config, error) {
+	return config.LoadConfig(path)
+}
+
+// saveConfig сохраняет конфигурацию в указанный JSON файл
+func saveConfig(path string, cfg *config.Config) error {
+	return config.SaveConfig(path, cfg)
+}
+
+// getCWD возвращает текущую рабочую директорию
+func getCWD() string {
+	cwd, err := os.Getwd()
 	if err != nil {
-		log.Println("No .env file found. Using environment variables.")
+		log.Fatalf("Error getting current working directory: %v", err)
 	}
-	return err
+	return cwd
 }

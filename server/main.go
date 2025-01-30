@@ -3,41 +3,36 @@
 package main
 
 import (
+	"LicenseApp/server/config"
 	"LicenseApp/server/pkg/auth"
 	"LicenseApp/server/pkg/db"
 	"LicenseApp/server/pkg/security"
 	"log"
 	"net/http"
 	"os"
-	"path/filepath"
 
 	"github.com/gorilla/mux"
-	"github.com/joho/godotenv"
 )
 
 func main() {
-	// Загрузка переменных окружения
-	err := loadEnv()
+	// Загрузка конфигурации
+	cfg, err := config.LoadConfig()
 	if err != nil {
-		log.Fatalf("Error loading environment variables: %v", err)
+		log.Fatalf("Error loading configuration: %v", err)
 	}
 
 	// Инициализация OAuth2 конфигурации
-	auth.InitOAuthConfig()
+	auth.InitOAuthConfig(cfg)
 
 	// Инициализация хранилища сессий
-	auth.SetupSessionStore()
+	auth.SetupSessionStore(cfg)
 
 	// Инициализация базы данных
 	db.Init()
 	db.Migrate()
 
 	// Настройка безопасности (например, загрузка ключей для JWT или других механизмов)
-	configPath := filepath.Join("server", "config")
-	privateKeyFile := filepath.Join(configPath, "keys", "private_key.pem")
-	publicKeyFile := filepath.Join(configPath, "keys", "public_key.pem")
-
-	err = security.LoadKeys(privateKeyFile, publicKeyFile)
+	err = security.LoadKeys(cfg.PrivateKeyPath, cfg.PublicKeyPath)
 	if err != nil {
 		log.Fatalf("Error loading security keys: %v", err)
 	}
@@ -62,37 +57,28 @@ func main() {
 	router.HandleFunc("/api/create-license-request", db.CreateLicenseRequestHandler).Methods("POST")
 
 	// Настройка путей к сертификатам и ключам для HTTPS
-	certFile := filepath.Join(configPath, "certs", "server.crt")
-	keyFile := filepath.Join(configPath, "certs", "server.key")
-	log.Println("Certificate file path:", certFile)
-	log.Println("Key file path:", keyFile)
+	certFile := cfg.CertFile
+	keyFile := cfg.KeyFile
+	log.Println("Certificate filepath:", certFile)
+	log.Println("Key filepath:", keyFile)
 
 	// Проверка существования файлов сертификата и ключа
 	if _, err := os.Stat(certFile); os.IsNotExist(err) {
-		log.Fatalf("Certificate not found at path: %s", certFile)
+		log.Fatalf("Certificate not found in directory: %s", certFile)
 	} else if err != nil {
 		log.Fatalf("Error checking certificate file: %v", err)
 	}
 
 	if _, err := os.Stat(keyFile); os.IsNotExist(err) {
-		log.Fatalf("Key not found at path: %s", keyFile)
+		log.Fatalf("Key not found in directory: %s", keyFile)
 	} else if err != nil {
-		log.Fatalf("Error checking key file: %v", err)
+		log.Fatalf("Error checking key: %v", err)
 	}
 
 	// Запуск HTTPS-сервера с использованием маршрутизатора
-	log.Println("HTTPS server started on port 8443...")
+	log.Println("HTTPS server running on port :8443...")
 	err = http.ListenAndServeTLS(":8443", certFile, keyFile, router)
 	if err != nil {
 		log.Fatalf("Error starting HTTPS server: %v", err)
 	}
-}
-
-// loadEnv загружает переменные окружения из файла .env
-func loadEnv() error {
-	err := godotenv.Load()
-	if err != nil {
-		log.Println("No .env file found. Using environment variables.")
-	}
-	return nil
 }
