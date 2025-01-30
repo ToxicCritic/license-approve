@@ -1,17 +1,15 @@
-// mock-oauth-server/models.go
-
 package main
 
 import "time"
 
-// User представляет пользователя в системе
+// Представляет пользователя в системе
 type User struct {
 	ID       string
 	Username string
-	Password string // В реальном приложении пароли хранятся в зашифрованном виде
+	Password string
 }
 
-// AuthorizationCode представляет авторизационный код
+// Представляет авторизационный код
 type AuthorizationCode struct {
 	Code        string
 	ClientID    string
@@ -20,7 +18,7 @@ type AuthorizationCode struct {
 	Expiry      time.Time
 }
 
-// AccessToken представляет токен доступа
+// Представляет токен доступа
 type AccessToken struct {
 	Token     string
 	UserID    string
@@ -29,7 +27,7 @@ type AccessToken struct {
 	TokenType string
 }
 
-// RefreshToken представляет токен обновления
+// Представляет токен обновления
 type RefreshToken struct {
 	Token    string
 	UserID   string

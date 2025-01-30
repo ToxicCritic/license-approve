@@ -52,7 +52,7 @@ func main() {
 
 	http.DefaultTransport = &http.Transport{
 		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // отключаем проверку сертификатов
+			InsecureSkipVerify: true, // отключить проверку сертификатов
 		},
 	}
 
@@ -61,14 +61,12 @@ func main() {
 	r.HandleFunc("/token", tokenHandler).Methods("POST")
 	r.HandleFunc("/userinfo", userInfoHandler).Methods("GET")
 
-	// Определяем exePath и exeDir так, как вы уже делаете выше
 	exePath, err := os.Executable()
 	if err != nil {
 		log.Fatalf("Не удалось определить путь к исполняемому файлу: %v", err)
 	}
 	exeDir := filepath.Dir(exePath)
 
-	// Пути к сертификатам и ключам, относительно exeDir
 	certFile := filepath.Join(exeDir, "certs", "mock-oauth.crt")
 	keyFile := filepath.Join(exeDir, "certs", "mock-oauth.key")
 
