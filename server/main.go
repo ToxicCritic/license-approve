@@ -20,6 +20,7 @@ import (
 func main() {
 	// Загрузка конфигурации
 	cfg, err := loadConfig()
+
 	if err != nil {
 		log.Fatalf("Error loading configuration: %v", err)
 	}
@@ -67,19 +68,19 @@ func main() {
 
 	// Проверка существования файлов сертификата и ключа
 	if _, err := os.Stat(certFile); os.IsNotExist(err) {
-		log.Fatalf("Certificate not found at path: %s", certFile)
+		log.Fatalf("Certificate not found in directory: %s", certFile)
 	} else if err != nil {
 		log.Fatalf("Error checking certificate file: %v", err)
 	}
 
 	if _, err := os.Stat(keyFile); os.IsNotExist(err) {
-		log.Fatalf("Key not found at path: %s", keyFile)
+		log.Fatalf("Key not found in directory: %s", keyFile)
 	} else if err != nil {
-		log.Fatalf("Error checking key file: %v", err)
+		log.Fatalf("Error checking key: %v", err)
 	}
 
 	// Запуск HTTPS-сервера с использованием маршрутизатора
-	log.Println("HTTPS server started on port 8443...")
+	log.Println("HTTPS server running on port :8443...")
 	err = http.ListenAndServeTLS(":8443", certFile, keyFile, router)
 	if err != nil {
 		log.Fatalf("Error starting HTTPS server: %v", err)
@@ -109,7 +110,7 @@ func loadConfig() (*config.Config, error) {
 	// Проверка обязательных переменных
 	if cfg.OAuthClientID == "" || cfg.OAuthClientSecret == "" || cfg.OAuthRedirectURL == "" ||
 		cfg.OAuthAuthURL == "" || cfg.OAuthTokenURL == "" || cfg.SessionSecret == "" ||
-		cfg.OAuthStateSecret == "" || cfg.PrivateKeyPath == "" || cfg.PublicKeyPath == "" ||
+		cfg.PrivateKeyPath == "" || cfg.PublicKeyPath == "" ||
 		cfg.CertFile == "" || cfg.KeyFile == "" {
 		return nil, fmt.Errorf("missing required configuration parameters")
 	}
