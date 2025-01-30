@@ -28,13 +28,14 @@ Thumbs.db
 
 # Ключи и сертификаты
 config/
+mock-oauth-server/config.json
 *.pem
 *.key
 *.crt
 
 # Личные данные, логины, пароли
-#*.env
-#.env.*
+*.env
+.env.*
 .envright
 
 # Логи и временные файлы

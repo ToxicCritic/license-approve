@@ -9,10 +9,8 @@ require (
 	github.com/lib/pq v1.10.9
 	github.com/spf13/viper v1.19.0
 	golang.org/x/oauth2 v0.25.0
-	example.com/licence-approval/common v0.0.0-00010101000000-000000000000
 )
 
-replace example.com/licence-approval/common => ../common
 
 require (
 	github.com/fsnotify/fsnotify v1.7.0 // indirect

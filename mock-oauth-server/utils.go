@@ -1,5 +1,3 @@
-// mock-oauth-server/utils.go
-
 package main
 
 import (
@@ -8,7 +6,7 @@ import (
 	"errors"
 )
 
-// generateRandomString генерирует случайную строку заданной длины
+// Генерирует случайную строку заданной длины
 func generateRandomString(n int) (string, error) {
 	b := make([]byte, n)
 	_, err := rand.Read(b)
@@ -18,14 +16,15 @@ func generateRandomString(n int) (string, error) {
 	return base64.URLEncoding.EncodeToString(b), nil
 }
 
-// validateClient проверяет, существует ли клиент с данным ID и секретом
-func validateClient(clientID, clientSecret string) bool {
-	// В реальном приложении клиентские данные хранятся в базе данных
-	// Здесь для примера используем статический клиент
-	return clientID == "mock-client-id" && clientSecret == "mock-client-secret"
+func validateClient(clientID, clientSecret string) (bool, bool) {
+	// В реальном приложении логика должна включать запрос к базе данных
+	// Здесь для примера используем статический "000000" / "999999".
+	validID := (clientID == "000000")
+	validSecret := (clientSecret == "999999")
+	return validID, validSecret
 }
 
-// findUser находит пользователя по имени пользователя и паролю
+// Находит пользователя по имени пользователя и паролю
 func findUser(username, password string) (*User, error) {
 	// В реальном приложении пользователи хранятся в базе данных
 	// Здесь для примера используем статического пользователя

@@ -1,12 +1,12 @@
-// mock-oauth-server/main.go
-
 package main
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 
 	"github.com/gorilla/mux"
 )
@@ -23,16 +23,26 @@ type Config struct {
 var configData Config
 
 func loadConfig() {
-	file, err := os.Open("config.json")
+	exePath, err := os.Executable()
 	if err != nil {
-		log.Fatalf("Failed to open config.json: %v", err)
+		log.Fatalf("Не удалось определить путь к исполняемому файлу: %v", err)
+	}
+	exeDir := filepath.Dir(exePath)
+	configPath := filepath.Join(exeDir, "config.json")
+	log.Printf("Загрузка конфигурации из: %s", configPath)
+
+	file, err := os.Open(configPath)
+	if err != nil {
+		log.Fatalf("Не удалось открыть config.json: %v", err)
 	}
 	defer file.Close()
 
 	decoder := json.NewDecoder(file)
 	if err := decoder.Decode(&configData); err != nil {
-		log.Fatalf("Failed to decode config.json: %v", err)
+		log.Fatalf("Не удалось декодировать config.json: %v", err)
 	}
+
+	log.Println("Конфигурация загружена успешно")
 }
 
 func main() {
@@ -40,13 +50,45 @@ func main() {
 
 	r := mux.NewRouter()
 
+	http.DefaultTransport = &http.Transport{
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true, // отключаем проверку сертификатов
+		},
+	}
+
+	// OAuth 2.0 Endpoints
 	r.HandleFunc("/authorize", authorizeHandler).Methods("GET", "POST")
 	r.HandleFunc("/token", tokenHandler).Methods("POST")
 	r.HandleFunc("/userinfo", userInfoHandler).Methods("GET")
 
+	// Определяем exePath и exeDir так, как вы уже делаете выше
+	exePath, err := os.Executable()
+	if err != nil {
+		log.Fatalf("Не удалось определить путь к исполняемому файлу: %v", err)
+	}
+	exeDir := filepath.Dir(exePath)
+
+	// Пути к сертификатам и ключам, относительно exeDir
+	certFile := filepath.Join(exeDir, "certs", "mock-oauth.crt")
+	keyFile := filepath.Join(exeDir, "certs", "mock-oauth.key")
+
+	// Проверка существования файлов сертификата и ключа
+	if _, err := os.Stat(certFile); os.IsNotExist(err) {
+		log.Fatalf("Certificate not found at path: %s", certFile)
+	} else if err != nil {
+		log.Fatalf("Error checking certificate file: %v", err)
+	}
+
+	if _, err := os.Stat(keyFile); os.IsNotExist(err) {
+		log.Fatalf("Key not found at path: %s", keyFile)
+	} else if err != nil {
+		log.Fatalf("Error checking key file: %v", err)
+	}
+
+	// Запуск HTTPS-сервера
 	addr := ":8081"
-	log.Printf("Mock OAuth2.0 server started on %s", addr)
-	if err := http.ListenAndServe(addr, r); err != nil {
+	log.Printf("Mock OAuth2.0 server started on %s with TLS", addr)
+	if err := http.ListenAndServeTLS(addr, certFile, keyFile, r); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
 }

@@ -1,5 +1,3 @@
-// server/main.go
-
 package main
 
 import (
@@ -7,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 
 	"example.com/licence-approval/server/config"
 	"example.com/licence-approval/server/pkg/auth"
@@ -18,8 +17,8 @@ import (
 )
 
 func main() {
-	// Загрузка конфигурации
-	cfg, err := loadConfig()
+	// Загрузка конфигурации (через viper, .env лежит рядом с бинарником)
+	cfg, err := loadConfigSameDirAsBinary()
 	if err != nil {
 		log.Fatalf("Error loading configuration: %v", err)
 	}
@@ -34,7 +33,7 @@ func main() {
 	db.Init()
 	db.Migrate()
 
-	// Настройка безопасности (например, загрузка ключей для JWT или других механизмов)
+	// Настройка безопасности (например, загрузка ключей для RSA-ключей)
 	err = security.LoadKeys(cfg.PrivateKeyPath, cfg.PublicKeyPath)
 	if err != nil {
 		log.Fatalf("Error loading security keys: %v", err)
@@ -59,26 +58,25 @@ func main() {
 	router.HandleFunc("/api/check-license", db.CheckLicenseHandler).Methods("GET")
 	router.HandleFunc("/api/create-license-request", db.CreateLicenseRequestHandler).Methods("POST")
 
-	// Настройка путей к сертификатам и ключам для HTTPS
+	// Настройка путей к сертификатам
 	certFile := cfg.CertFile
 	keyFile := cfg.KeyFile
 	log.Println("Certificate file path:", certFile)
 	log.Println("Key file path:", keyFile)
 
-	// Проверка существования файлов сертификата и ключа
+	// Проверка сертификата и ключа
 	if _, err := os.Stat(certFile); os.IsNotExist(err) {
 		log.Fatalf("Certificate not found at path: %s", certFile)
 	} else if err != nil {
 		log.Fatalf("Error checking certificate file: %v", err)
 	}
-
 	if _, err := os.Stat(keyFile); os.IsNotExist(err) {
 		log.Fatalf("Key not found at path: %s", keyFile)
 	} else if err != nil {
 		log.Fatalf("Error checking key file: %v", err)
 	}
 
-	// Запуск HTTPS-сервера с использованием маршрутизатора
+	// Запуск HTTPS-сервера
 	log.Println("HTTPS server started on port 8443...")
 	err = http.ListenAndServeTLS(":8443", certFile, keyFile, router)
 	if err != nil {
@@ -86,30 +84,36 @@ func main() {
 	}
 }
 
-// loadConfig загружает конфигурацию с использованием viper
-func loadConfig() (*config.Config, error) {
-	viper.SetConfigName(".env") // имя файла конфигурации (без расширения)
-	viper.SetConfigType("env")  // тип файла конфигурации
-	viper.AddConfigPath(".")    // путь к файлу конфигурации
+// Ищет файл ".env" рядом с бинарником (server),
+// а если его нет — использует переменные окружения.
+func loadConfigSameDirAsBinary() (*config.Config, error) {
+	exePath, err := os.Executable()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get executable path: %w", err)
+	}
+	exeDir := filepath.Dir(exePath)
 
-	// Загрузка переменных окружения
+	// Формируем путь к .env в той же папке
+	envPath := filepath.Join(exeDir, ".env")
+
+	viper.SetConfigFile(envPath)
+	viper.SetConfigType("env")
+
+	if err := viper.ReadInConfig(); err != nil {
+		log.Printf("No .env file found in %s (using environment vars). Error: %v\n", exeDir, err)
+	}
+
+	// Разрешаем переопределение переменных окружением
 	viper.AutomaticEnv()
 
-	// Чтение конфигурационного файла
-	if err := viper.ReadInConfig(); err != nil {
-		log.Println("No .env file found. Using environment variables.")
-	}
-
-	// Считывание конфигурации в структуру
 	var cfg config.Config
 	if err := viper.Unmarshal(&cfg); err != nil {
-		return nil, fmt.Errorf("unable to decode into struct: %w", err)
+		return nil, fmt.Errorf("unable to decode config into struct: %w", err)
 	}
 
-	// Проверка обязательных переменных
 	if cfg.OAuthClientID == "" || cfg.OAuthClientSecret == "" || cfg.OAuthRedirectURL == "" ||
 		cfg.OAuthAuthURL == "" || cfg.OAuthTokenURL == "" || cfg.SessionSecret == "" ||
-		cfg.OAuthStateSecret == "" || cfg.PrivateKeyPath == "" || cfg.PublicKeyPath == "" ||
+		cfg.PrivateKeyPath == "" || cfg.PublicKeyPath == "" ||
 		cfg.CertFile == "" || cfg.KeyFile == "" {
 		return nil, fmt.Errorf("missing required configuration parameters")
 	}
