@@ -67,6 +67,7 @@ func main() {
 	}
 	exeDir := filepath.Dir(exePath)
 
+	// Пути к сертификатам и ключам, относительно exeDir
 	certFile := filepath.Join(exeDir, "certs", "mock-oauth.crt")
 	keyFile := filepath.Join(exeDir, "certs", "mock-oauth.key")
 

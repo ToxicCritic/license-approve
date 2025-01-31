@@ -25,6 +25,8 @@ type AccessToken struct {
 	ClientID  string
 	Expiry    time.Time
 	TokenType string
+
+	RefreshToken string
 }
 
 // Представляет токен обновления
