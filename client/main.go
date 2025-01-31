@@ -1,18 +1,21 @@
 package main
 
 import (
+	"crypto/tls"
+	"crypto/x509"
+	"net/http"
+	"path/filepath"
+	"sync"
+
 	"example.com/licence-approval/client/pkg/config"
 	"example.com/licence-approval/client/pkg/errors"
 	"example.com/licence-approval/client/pkg/handlers"
 	"example.com/licence-approval/client/pkg/utils"
 
-
-
-	"example.com/licence-approval/client/pkg/config"
-	"example.com/licence-approval/client/pkg/handlers"
-	"example.com/licence-approval/client/pkg/utils"
-
-	"example.com/licence-approval/client/pkg/errors"
+	"fmt"
+	"log"
+	"os"
+	"time"
 )
 
 const (
@@ -170,4 +173,3 @@ func main() {
 
 	fmt.Println("=== Client Finished ===")
 }
-
