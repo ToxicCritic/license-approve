@@ -245,7 +245,7 @@ func handleAuthorizationCodeGrant(w http.ResponseWriter, r *http.Request) {
 		Token:        accessToken,
 		UserID:       authCode.UserID,
 		ClientID:     clientID,
-		Expiry:       now.Add(15 * time.Second), // 15 секунд для теста рефреша
+		Expiry:       now.Add(1 * time.Minute), // 15 секунд для теста рефреша
 		TokenType:    "Bearer",
 		RefreshToken: refreshToken,
 	}
@@ -265,7 +265,7 @@ func handleAuthorizationCodeGrant(w http.ResponseWriter, r *http.Request) {
 	resp := map[string]interface{}{
 		"access_token":  accessToken,
 		"token_type":    "Bearer",
-		"expires_in":    60, // 1 час
+		"expires_in":    1, // 1 час
 		"refresh_token": refreshToken,
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -328,7 +328,7 @@ func handleRefreshTokenGrant(w http.ResponseWriter, r *http.Request) {
 		Token:        newAccessToken,
 		UserID:       refToken.UserID,
 		ClientID:     clientID,
-		Expiry:       now.Add(15 * time.Second), // 15 секунд для теста рефреша
+		Expiry:       now.Add(1 * time.Minute), // 15 секунд для теста рефреша
 		TokenType:    "Bearer",
 		RefreshToken: refreshToken,
 	}
@@ -352,7 +352,7 @@ func handleRefreshTokenGrant(w http.ResponseWriter, r *http.Request) {
 	resp := map[string]interface{}{
 		"access_token":  newAccessToken,
 		"token_type":    "Bearer",
-		"expires_in":    3600,
+		"expires_in":    1,
 		"refresh_token": newRefreshToken,
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -447,78 +447,79 @@ func handleIntrospection(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(resp)
 		log.Printf("Introspection: token is active, returning info for %s", token)
 		return
-		// } else {
-		// 	// Токен истёк, пробуем "автоматический" рефреш
-		// 	refresh := at.RefreshToken
-		// 	log.Printf("Introspection: token expired. Attempt auto-refresh with refresh_token=%s", refresh)
-
-		// 	// Находим refreshToken в refreshTokens
-		// 	rt, exists := refreshTokens[refresh]
-		// 	if !exists {
-		// 		log.Printf("No such refresh token: %s => cannot auto-refresh", refresh)
-		// 		w.Header().Set("Content-Type", "application/json")
-		// 		json.NewEncoder(w).Encode(struct {
-		// 			Active bool `json:"active"`
-		// 		}{Active: false})
-		// 		return
-		// 	}
-		// 	if rt.Expiry.Before(now) {
-		// 		log.Printf("Refresh token expired: %s => cannot auto-refresh", refresh)
-		// 		w.Header().Set("Content-Type", "application/json")
-		// 		json.NewEncoder(w).Encode(struct {
-		// 			Active bool `json:"active"`
-		// 		}{Active: false})
-		// 		return
-		// 	}
-		// 	// Удаляем старый tokens
-		// 	delete(accessTokens, token)
-		// 	delete(refreshTokens, refresh)
-
-		// 	// Генерируем новые tokens
-		// 	newAccessToken, err := generateRandomString(32)
-		// 	if err != nil {
-		// 		http.Error(w, "Failed to generate new access token", http.StatusInternalServerError)
-		// 		return
-		// 	}
-		// 	newRefreshToken, err := generateRandomString(32)
-		// 	if err != nil {
-		// 		http.Error(w, "Failed to generate new refresh token", http.StatusInternalServerError)
-		// 		return
-		// 	}
-		// 	at2 := &AccessToken{
-		// 		Token:        newAccessToken,
-		// 		UserID:       rt.UserID,
-		// 		ClientID:     rt.ClientID,
-		// 		Expiry:       now.Add(1 * time.Hour),
-		// 		TokenType:    "Bearer",
-		// 		RefreshToken: newRefreshToken,
-		// 	}
-		// 	rt2 := &RefreshToken{
-		// 		Token:    newRefreshToken,
-		// 		UserID:   rt.UserID,
-		// 		ClientID: rt.ClientID,
-		// 		Expiry:   now.Add(24 * time.Hour),
-		// 	}
-		// 	accessTokens[newAccessToken] = at2
-		// 	refreshTokens[newRefreshToken] = rt2
-
-		// 	log.Printf("Auto-refresh succeeded. newAccessToken=%s, newRefreshToken=%s", newAccessToken, newRefreshToken)
-
-		// 	resp := struct {
-		// 		Active       bool   `json:"active"`
-		// 		AccessToken  string `json:"access_token"`
-		// 		RefreshToken string `json:"refresh_token"`
-		// 		ExpiresIn    int64  `json:"expires_in"`
-		// 		TokenType    string `json:"token_type"`
-		// 	}{
-		// 		Active:       true,
-		// 		AccessToken:  newAccessToken,
-		// 		RefreshToken: newRefreshToken,
-		// 		ExpiresIn:    int64(at2.Expiry.Sub(now).Seconds()),
-		// 		TokenType:    "Bearer",
-		// 	}
-		// 	w.Header().Set("Content-Type", "application/json")
-		// 	json.NewEncoder(w).Encode(resp)
-		// 	log.Printf("Introspection: returning auto-refreshed token for old token=%s", token)
 	}
+	// } else {
+	// 	// Токен истёк, пробуем "автоматический" рефреш
+	// 	refresh := at.RefreshToken
+	// 	log.Printf("Introspection: token expired. Attempt auto-refresh with refresh_token=%s", refresh)
+
+	// 	// Находим refreshToken в refreshTokens
+	// 	rt, exists := refreshTokens[refresh]
+	// 	if !exists {
+	// 		log.Printf("No such refresh token: %s => cannot auto-refresh", refresh)
+	// 		w.Header().Set("Content-Type", "application/json")
+	// 		json.NewEncoder(w).Encode(struct {
+	// 			Active bool `json:"active"`
+	// 		}{Active: false})
+	// 		return
+	// 	}
+	// 	if rt.Expiry.Before(now) {
+	// 		log.Printf("Refresh token expired: %s => cannot auto-refresh", refresh)
+	// 		w.Header().Set("Content-Type", "application/json")
+	// 		json.NewEncoder(w).Encode(struct {
+	// 			Active bool `json:"active"`
+	// 		}{Active: false})
+	// 		return
+	// 	}
+	// 	// Удаляем старый tokens
+	// 	delete(accessTokens, token)
+	// 	delete(refreshTokens, refresh)
+
+	// 	// Генерируем новые tokens
+	// 	newAccessToken, err := generateRandomString(32)
+	// 	if err != nil {
+	// 		http.Error(w, "Failed to generate new access token", http.StatusInternalServerError)
+	// 		return
+	// 	}
+	// 	newRefreshToken, err := generateRandomString(32)
+	// 	if err != nil {
+	// 		http.Error(w, "Failed to generate new refresh token", http.StatusInternalServerError)
+	// 		return
+	// 	}
+	// 	at2 := &AccessToken{
+	// 		Token:        newAccessToken,
+	// 		UserID:       rt.UserID,
+	// 		ClientID:     rt.ClientID,
+	// 		Expiry:       now.Add(1 * time.Hour),
+	// 		TokenType:    "Bearer",
+	// 		RefreshToken: newRefreshToken,
+	// 	}
+	// 	rt2 := &RefreshToken{
+	// 		Token:    newRefreshToken,
+	// 		UserID:   rt.UserID,
+	// 		ClientID: rt.ClientID,
+	// 		Expiry:   now.Add(24 * time.Hour),
+	// 	}
+	// 	accessTokens[newAccessToken] = at2
+	// 	refreshTokens[newRefreshToken] = rt2
+
+	// 	log.Printf("Auto-refresh succeeded. newAccessToken=%s, newRefreshToken=%s", newAccessToken, newRefreshToken)
+
+	// 	resp := struct {
+	// 		Active       bool   `json:"active"`
+	// 		AccessToken  string `json:"access_token"`
+	// 		RefreshToken string `json:"refresh_token"`
+	// 		ExpiresIn    int64  `json:"expires_in"`
+	// 		TokenType    string `json:"token_type"`
+	// 	}{
+	// 		Active:       true,
+	// 		AccessToken:  newAccessToken,
+	// 		RefreshToken: newRefreshToken,
+	// 		ExpiresIn:    int64(at2.Expiry.Sub(now).Seconds()),
+	// 		TokenType:    "Bearer",
+	// 	}
+	// 	w.Header().Set("Content-Type", "application/json")
+	// 	json.NewEncoder(w).Encode(resp)
+	// 	log.Printf("Introspection: returning auto-refreshed token for old token=%s", token)
+	// }
 }
