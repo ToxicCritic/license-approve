@@ -43,6 +43,8 @@ mock-oauth-server/config.json
 temp/
 tmp/
 
+.work
+.sum
 # Если есть специфичные настройки
 # custom_config.yml
 # secrets.yaml
