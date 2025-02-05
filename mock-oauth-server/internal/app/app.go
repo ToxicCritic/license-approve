@@ -1,38 +1,68 @@
-// internal/app/app.go
 package app
 
 import (
-	"mock-authserver/config"
-	"mock-authserver/internal/api/v1/httpapi/handler"
-	"mock-authserver/internal/api/v1/httpapi/router"
-	"mock-authserver/internal/repository/inmem"
-	"mock-authserver/internal/service/jwtaccess"
-	"mock-authserver/internal/usecase"
+	"crypto/tls"
+	"fmt"
+	"log"
+	"mock-oauth-server/config"
+	"mock-oauth-server/internal/api/v1/httpapi/router"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 )
 
-// App хранит роутер (как минимум).
 type App struct {
-	Router http.Handler
+	cfg    *config.Config
+	server *http.Server
 }
 
 func New(cfg *config.Config) (*App, error) {
-	// In-memory store
-	store := inmem.NewStore()
+	r := router.New()
 
-	// UseCase
-	uc := usecase.New(store)
+	if _, err := os.Stat(cfg.CertFile); err != nil {
+		return nil, fmt.Errorf("cert file not found: %v", err)
+	}
+	if _, err := os.Stat(cfg.KeyFile); err != nil {
+		return nil, fmt.Errorf("key file not found: %v", err)
+	}
 
-	// JWT service
-	jwtSvc := jwtaccess.NewJWTService(store, cfg.SecretKey)
+	srv := &http.Server{
+		Addr:    cfg.Addr,
+		Handler: r,
+		TLSConfig: &tls.Config{
+			MinVersion: tls.VersionTLS12,
+		},
+	}
 
-	// Handler
-	h := handler.New(store, uc, jwtSvc)
+	app := &App{
+		cfg:    cfg,
+		server: srv,
+	}
+	return app, nil
+}
 
-	// Router
-	r := router.New(h)
+func (a *App) Run() error {
+	// Ловим сигналы для graceful shutdown
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
-	return &App{
-		Router: r,
-	}, nil
+	go func() {
+		<-quit
+		log.Println("[App] Shutting down mock-oauth-server gracefully...")
+		if err := a.server.Close(); err != nil {
+			log.Printf("[App] Server Close error: %v\n", err)
+		}
+	}()
+
+	log.Printf("[App] Starting mock OAuth2.0 server on %s...\n", a.cfg.Addr)
+
+	err := a.server.ListenAndServeTLS(a.cfg.CertFile, a.cfg.KeyFile)
+	if err != nil && err != http.ErrServerClosed {
+		return fmt.Errorf("ListenAndServeTLS error: %w", err)
+	}
+	time.Sleep(1 * time.Second)
+	log.Println("[App] Server stopped.")
+	return nil
 }

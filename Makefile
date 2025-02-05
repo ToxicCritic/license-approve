@@ -8,6 +8,7 @@ MOCK_OAUTH_BINARY=mock-oauth-server
 # Source directories
 CLIENT_DIR=client
 SERVER_DIR=server
+# Обратите внимание: у mock-oauth-server код лежит в ./mock-oauth-server/cmd
 MOCK_OAUTH_DIR=mock-oauth-server/cmd
 
 # Build directories
