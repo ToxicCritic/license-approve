@@ -68,6 +68,7 @@ build-client:
 build-server:
 	@echo "[SERVER] Building server module..."
 	mkdir -p $(SERVER_BUILD_DIR)
+	cp $(SERVER_DIR)/.env $(SERVER_BUILD_DIR)/ || true
 	go build $(GO_FLAGS) -o $(SERVER_BUILD_DIR)/$(SERVER_BINARY) ./$(SERVER_DIR)
 
 	@echo "[SERVER] Copying keys..."
@@ -75,6 +76,11 @@ build-server:
 	cp $(SERVER_DIR)/config/keys/private_key.pem $(SERVER_BUILD_DIR)/config/keys/ || true
 	cp $(SERVER_DIR)/config/keys/public_key.pem  $(SERVER_BUILD_DIR)/config/keys/ || true
 
+	@echo "[SERVER] Copying certs..."
+	mkdir -p $(SERVER_BUILD_DIR)/config/certs
+	cp $(SERVER_DIR)/config/certs/server.crt $(SERVER_BUILD_DIR)/config/certs/ || true
+	cp $(SERVER_DIR)/config/certs/server.key $(SERVER_BUILD_DIR)/config/certs/ || true
+	
 	@echo "[SERVER] Done. Binary at $(SERVER_BUILD_DIR)/$(SERVER_BINARY)"
 
 ## ===== Build mock-oauth =====
@@ -85,9 +91,8 @@ build-mock-oauth:
 
 	@echo "[MOCK-OAUTH] Copying config.json and certs..."
 	mkdir -p $(MOCK_OAUTH_BUILD_DIR)/certs
-	cp $(MOCK_OAUTH_DIR)/config.json $(MOCK_OAUTH_BUILD_DIR)/ || true
-	cp $(MOCK_OAUTH_DIR)/certs/mock-oauth.crt $(MOCK_OAUTH_BUILD_DIR)/certs/ || true
-	cp $(MOCK_OAUTH_DIR)/certs/mock-oauth.key $(MOCK_OAUTH_BUILD_DIR)/certs/ || true
+	cp mock-oauth-server/certs/mock-oauth.crt $(MOCK_OAUTH_BUILD_DIR)/certs/ || true
+	cp mock-oauth-server/certs/mock-oauth.key $(MOCK_OAUTH_BUILD_DIR)/certs/ || true
 
 	@echo "[MOCK-OAUTH] Done. Binary at $(MOCK_OAUTH_BUILD_DIR)/$(MOCK_OAUTH_BINARY)"
 

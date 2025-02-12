@@ -68,7 +68,7 @@ func main() {
 	}
 
 	// Читаем сертификат сервера (например, в ../server/config/certs/server.crt)
-	certPath := filepath.Join(exeDir, "../server/config/certs/server.crt")
+	certPath := filepath.Join(exeDir, "server/config/certs/server.crt")
 
 	caCert, err := os.ReadFile(certPath)
 	if err != nil {
@@ -81,9 +81,10 @@ func main() {
 		log.Fatalf("Failed to append server certificate to CA pool")
 	}
 
-	// Настраиваем TLS
-	tlsConfig := &tls.Config{RootCAs: caCertPool}
-
+	tlsConfig := &tls.Config{
+		RootCAs:            caCertPool,
+		InsecureSkipVerify: true,
+	}
 	// Создаём HTTP-клиент
 	httpClient := &http.Client{
 		Timeout:   10 * time.Second,

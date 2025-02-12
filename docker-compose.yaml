@@ -1,0 +1,45 @@
+services:
+  db:
+    image: postgres:15
+    container_name: license_db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: license_db
+      POSTGRES_USER: license_user
+      POSTGRES_PASSWORD: "yourpassword"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  mock-oauth:
+    build:
+      context: ./mock-oauth-server
+      dockerfile: Dockerfile
+    container_name: mock_oauth_server
+    ports:
+      - "8081:8081"
+
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: license_server
+    ports:
+      - "8443:8443"
+    env_file:
+      - ./server/.env
+    depends_on:
+      - db
+      - mock-oauth
+
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: client
+    depends_on:
+      - server
+      - mock-oauth
+
+volumes:
+  db_data:
