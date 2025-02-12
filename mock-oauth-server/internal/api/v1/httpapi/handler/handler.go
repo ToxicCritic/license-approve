@@ -11,8 +11,8 @@ type Handler struct {
 }
 
 func NewHandler() *Handler {
-	store := inmem.NewStore()        // хранит users, groups, tokens
-	uc := usecase.NewUsecases(store) // бизнес-логика
+	store := inmem.NewStore() // хранит users, groups, tokens
+	uc := usecase.NewUsecases(store)
 	return &Handler{
 		store:    store,
 		usecases: uc,

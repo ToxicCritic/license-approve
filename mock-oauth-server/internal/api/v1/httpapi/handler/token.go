@@ -93,7 +93,7 @@ func (h *Handler) handleAuthorizationCodeGrant(w http.ResponseWriter, r *http.Re
 	resp := map[string]interface{}{
 		"access_token":  accessToken,
 		"token_type":    "Bearer",
-		"expires_in":    60,
+		"expires_in":    60, // ДЛЯ ТЕСТА ОБНОВЛЕНИЯ ТОКЕНА 1 МИНУТА
 		"refresh_token": refreshToken,
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -125,7 +125,7 @@ func (h *Handler) handleRefreshTokenGrant(w http.ResponseWriter, r *http.Request
 		Token:     newAccess,
 		UserID:    rt.UserID,
 		ClientID:  clientID,
-		Expiry:    time.Now().Add(1 * time.Minute),
+		Expiry:    time.Now().Add(1 * time.Minute), // ДЛЯ ТЕСТА ОБНОВЛЕНИЯ ТОКЕНА 1 МИНУТА
 		TokenType: "Bearer",
 	}
 	h.store.RefreshTokens[newRefresh] = &inmem.RefreshToken{
@@ -140,7 +140,7 @@ func (h *Handler) handleRefreshTokenGrant(w http.ResponseWriter, r *http.Request
 	resp := map[string]interface{}{
 		"access_token":  newAccess,
 		"token_type":    "Bearer",
-		"expires_in":    60,
+		"expires_in":    60, // ДЛЯ ТЕСТА ОБНОВЛЕНИЯ ТОКЕНА 1 МИНУТА
 		"refresh_token": newRefresh,
 	}
 	w.Header().Set("Content-Type", "application/json")

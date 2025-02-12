@@ -37,7 +37,6 @@ func (h *Handler) handleAuthorizeGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Примитивная форма
 	html := fmt.Sprintf(`
 <html>
  <body>

@@ -3,20 +3,18 @@ package main
 import (
 	"crypto/tls"
 	"crypto/x509"
-
+	"fmt"
+	"log"
 	"net/http"
+	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"example.com/licence-approval/client/pkg/config"
 	"example.com/licence-approval/client/pkg/errors"
 	"example.com/licence-approval/client/pkg/handlers"
 	"example.com/licence-approval/client/pkg/utils"
-
-	"fmt"
-	"log"
-	"os"
-	"time"
 )
 
 const (
@@ -46,7 +44,6 @@ func main() {
 	// Проверяем LICENSE_SERVER_URL
 	if cfg.LicenseServerURL == "" {
 		log.Fatal("LICENSE_SERVER_URL is not set in config.json")
-
 	}
 
 	// Генерируем LicenseKey, если нет
@@ -61,7 +58,6 @@ func main() {
 		// Сохраняем
 		if err := config.SaveConfig(configPath, cfg); err != nil {
 			log.Fatalf("Failed to save config with new license key: %v", err)
-
 		}
 	} else {
 		fmt.Printf("Using existing License Key: %s\n", cfg.LicenseKey)
@@ -69,7 +65,6 @@ func main() {
 
 	// Читаем сертификат сервера (например, в ../server/config/certs/server.crt)
 	certPath := filepath.Join(exeDir, "server/config/certs/server.crt")
-
 	caCert, err := os.ReadFile(certPath)
 	if err != nil {
 		log.Fatalf("Failed to read server certificate: %v", err)
@@ -99,20 +94,17 @@ func main() {
 		defer wg.Done()
 
 		hasLicense, message, err := handlers.CheckLicense(httpClient, cfg.LicenseServerURL, cfg.LicenseKey)
-
 		if err != nil {
 			log.Printf("Failed to check license: %v", err)
 			return
 		}
 
+		// Если лицензия активна, выводим сообщение с TAG и завершаем работу
 		if hasLicense {
-			fmt.Println("License is active. The client can proceed.")
+			fmt.Println(message) // сообщение должно содержать "TAG: <значение>"
 			return
 		} else {
 			switch message {
-			case "License is active.":
-				fmt.Println("License is active. The client can proceed.")
-				return
 			case "License request is pending.":
 				log.Println("License request is pending. Waiting for approval...")
 			case "License request has been rejected.":
@@ -123,9 +115,8 @@ func main() {
 			}
 		}
 
-		// Создаём заявку
+		// Создаём заявку на лицензию
 		requestID, err := handlers.CreateLicenseRequest(httpClient, cfg.LicenseServerURL, cfg.LicenseKey)
-
 		if err != nil {
 			if reqErr, ok := err.(*errors.LicenseRequestExistsError); ok {
 				log.Printf("License request already exists with ID %d. Waiting for approval...", reqErr.RequestID)
@@ -145,7 +136,6 @@ func main() {
 			select {
 			case <-ticker.C:
 				hasLicenseNow, msg, err := handlers.CheckLicense(httpClient, cfg.LicenseServerURL, cfg.LicenseKey)
-
 				if err != nil {
 					if _, ok := err.(*errors.LicenseRejectedError); ok {
 						fmt.Println("Your license request has been rejected by the administrator.")
@@ -155,7 +145,7 @@ func main() {
 					continue
 				}
 				if hasLicenseNow {
-					fmt.Println("License approved! The client can proceed.")
+					fmt.Println(msg) // msg содержит TAG, например "License is active. TAG: <значение>"
 					return
 				} else {
 					log.Printf("License status: %s. Continuing to check...", msg)
