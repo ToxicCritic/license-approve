@@ -1,0 +1,139 @@
+// server/pkg/auth/auth_handler.go
+
+package auth
+
+import (
+	"crypto/rand"
+	"encoding/base64"
+	"encoding/gob"
+	"log"
+	"net/http"
+	"time"
+
+	"example.com/licence-approval/server/config"
+
+	"github.com/gorilla/sessions"
+	"golang.org/x/oauth2"
+)
+
+// init регистрирует типы для кодирования сессий (oauth2.Token, UserSession)
+func init() {
+	gob.Register(&oauth2.Token{})
+	gob.Register(&UserSession{})
+}
+
+// UserSession хранит токены и время истечения для сессии пользователя
+type UserSession struct {
+	AccessToken  string
+	RefreshToken string
+	TokenType    string
+	Expiry       time.Time
+}
+
+// Store глобальное хранилище cookie-сессий
+var Store *sessions.CookieStore
+
+// SetupSessionStore инициализирует хранилище сессий с использованием SESSION_SECRET из конфигурации
+func SetupSessionStore(cfg *config.Config) {
+	sessionSecret := cfg.SessionSecret
+	if sessionSecret == "" {
+		log.Fatal("SESSION_SECRET не установлен в конфигурации")
+	}
+	Store = sessions.NewCookieStore([]byte(sessionSecret))
+	Store.Options = &sessions.Options{
+		Path:     "/",
+		MaxAge:   86400,
+		HttpOnly: true,
+		Secure:   true, // prod
+	}
+}
+
+// generateStateToken генерирует случайный токен для защиты от CSRF
+func generateStateToken() string {
+	b := make([]byte, 16)
+	_, err := rand.Read(b)
+	if err != nil {
+		log.Println("Ошибка генерации состояния:", err)
+		return "default-state"
+	}
+	return base64.URLEncoding.EncodeToString(b)
+}
+
+// LoginHandler запускает процесс OAuth2 авторизации, генерируя state и перенаправляя пользователя
+func LoginHandler(w http.ResponseWriter, r *http.Request) {
+	// Генерация state-токена для защиты от CSRF атак
+	state := generateStateToken()
+
+	session, err := Store.Get(r, "auth-session")
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+	session.Values["state"] = state
+	if err := session.Save(r, w); err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	// Формирование URL авторизации с указанием state и режима доступа offline
+	url := OAuthConfig.AuthCodeURL(state, oauth2.AccessTypeOffline)
+	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
+}
+
+// CallbackHandler обрабатывает обратный вызов OAuth2: проверяет state, обменивает код на токен и сохраняет сессию
+func CallbackHandler(w http.ResponseWriter, r *http.Request) {
+	queryState := r.URL.Query().Get("state")
+	code := r.URL.Query().Get("code")
+
+	session, err := Store.Get(r, "auth-session")
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	savedState, ok := session.Values["state"].(string)
+	if !ok || savedState != queryState {
+		http.Error(w, "Invalid state param", http.StatusBadRequest)
+		return
+	}
+
+	token, err := ExchangeCodeForToken(code)
+	if err != nil {
+		http.Error(w, "Failed to exchange code for token: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	userSession := &UserSession{
+		AccessToken:  token.AccessToken,
+		RefreshToken: token.RefreshToken,
+		TokenType:    token.TokenType,
+		Expiry:       token.Expiry,
+	}
+	session.Values["authenticated"] = true
+	session.Values["user"] = userSession
+	if err := session.Save(r, w); err != nil {
+		http.Error(w, "Failed to save session: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, "/admin/license-requests", http.StatusSeeOther)
+}
+
+// LogoutHandler завершает сессию пользователя, очищая данные и удаляя куки, затем перенаправляет на главную страницу
+func LogoutHandler(w http.ResponseWriter, r *http.Request) {
+	session, err := Store.Get(r, "auth-session")
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	session.Values["authenticated"] = false
+	session.Values["user"] = nil
+	session.Options.MaxAge = -1
+
+	if err := session.Save(r, w); err != nil {
+		http.Error(w, "Failed to save session", http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, "/", http.StatusSeeOther)
+}

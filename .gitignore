@@ -7,11 +7,6 @@ build/
 *.so
 *.dylib
 
-# Кеш модуля Go
-pkg/
-
-main
-
 # Конфигурационные файлы IDE/редакторов
 .idea/
 .vscode/
@@ -27,8 +22,6 @@ coverage/
 Thumbs.db
 
 # Ключи и сертификаты
-config/
-mock-oauth-server/config.json
 *.pem
 *.key
 *.crt

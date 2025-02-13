@@ -28,18 +28,22 @@ func New(cfg *config.Config) (*App, error) {
 		return nil, fmt.Errorf("key file not found: %v", err)
 	}
 
+	tlsConf := &tls.Config{
+		MinVersion: tls.VersionTLS12,
+		ClientAuth: tls.NoClientCert,
+	}
+
 	srv := &http.Server{
-		Addr:    cfg.Addr,
-		Handler: r,
-		TLSConfig: &tls.Config{
-			MinVersion: tls.VersionTLS12,
-		},
+		Addr:      cfg.Addr,
+		Handler:   r,
+		TLSConfig: tlsConf,
 	}
 
 	app := &App{
 		cfg:    cfg,
 		server: srv,
 	}
+
 	return app, nil
 }
 
