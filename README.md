@@ -104,10 +104,10 @@ psql -U license_user -h db -d license_db
 
 - **Client**: смотрите логи в консоли — он проверит лицензию, если надо, создаст заявку.  
 - **Server**: доступен по адресу [https://localhost:8443](https://localhost:8443).  
-- Откройте [https://localhost:8443/admin/license-requests](https://localhost:8443/admin/license-requests) в браузере. Проверьте отказ в доступе к административным ресурсам. 
+- Откройте [https://localhost:8443/admin/license-requests](https://localhost:8443/admin/license-requests) в браузере. Проверьте отказ в доступе к административным ресурсам при отсутствии авторизации. 
 - Необходимо авторизоваться через Mock OAuth. По адресу [https://localhost:8443/auth/login](https://localhost:8443/auth/login) введите `username=admin`, `password=password`
 - После входа увидите список заявок на лицензию (если клиент её создал). Можно одобрить или отклонить.  
-- **Mock OAuth**: [http://localhost:8081/authorize](http://localhost:8081/authorize) откроется страница авторизации.
+- **Mock OAuth**: [https://localhost:8081/authorize](https://localhost:8081/authorize) откроется страница авторизации.
 
 ### 3.5. Остановка
 
@@ -181,7 +181,7 @@ CERT_FILE=config/certs/server.crt
 KEY_FILE=config/certs/server.key
 ```
 
-> - `OAUTH_TOKEN_URL`: внутри Docker → `http://mock-oauth:8081/token`; снаружи → `http://localhost:8081/token`.  
+> - `OAUTH_TOKEN_URL`: внутри Docker → `https://mock-oauth:8081/token`; снаружи → `https://localhost:8081/token`.  
 > - `CERT_FILE` / `KEY_FILE`: самоподписанные TLS-сертификаты для лиценз-сервера.
 
 ---
