@@ -1,5 +1,3 @@
-// server/pkg/auth/auth_handler.go
-
 package auth
 
 import (

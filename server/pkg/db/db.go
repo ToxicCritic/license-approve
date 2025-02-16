@@ -17,7 +17,7 @@ func Init() {
 	dbPass := getEnvOrDefault("DB_PASS", "yourpassword")
 	dbName := getEnvOrDefault("DB_NAME", "license_db")
 	dbSSLMode := getEnvOrDefault("DB_SSLMODE", "disable")
-	dbHost := getEnvOrDefault("DB_HOST", "db")
+	dbHost := getEnvOrDefault("DB_HOST", "localhost")
 	dbPort := getEnvOrDefault("DB_PORT", "5432")
 
 	// Формируем строку подключения

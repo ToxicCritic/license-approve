@@ -63,8 +63,7 @@ func main() {
 		fmt.Printf("Using existing License Key: %s\n", cfg.LicenseKey)
 	}
 
-	// Читаем сертификат сервера (например, в ../server/config/certs/server.crt)
-	certPath := filepath.Join(exeDir, "server/config/certs/server.crt")
+	certPath := filepath.Join(exeDir, "/license-srv-srt/server.crt")
 	caCert, err := os.ReadFile(certPath)
 	if err != nil {
 		log.Fatalf("Failed to read server certificate: %v", err)
@@ -80,7 +79,7 @@ func main() {
 		RootCAs:            caCertPool,
 		InsecureSkipVerify: true,
 	}
-	// Создаём HTTP-клиент
+
 	httpClient := &http.Client{
 		Timeout:   10 * time.Second,
 		Transport: &http.Transport{TLSClientConfig: tlsConfig},
