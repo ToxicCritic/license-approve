@@ -1,13 +1,9 @@
-// server/main.go
-
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"os"
-	"path/filepath"
 
 	"example.com/licence-approval/server/config"
 	"example.com/licence-approval/server/pkg/auth"
@@ -15,11 +11,10 @@ import (
 	"example.com/licence-approval/server/pkg/security"
 
 	"github.com/gorilla/mux"
-	"github.com/spf13/viper"
 )
 
 func main() {
-	cfg, err := loadConfigSameDirAsBinary()
+	cfg, err := config.LoadConfig()
 	if err != nil {
 		log.Fatalf("Error loading config: %v", err)
 	}
@@ -70,33 +65,4 @@ func main() {
 	if err != nil {
 		log.Fatalf("ListenAndServeTLS error: %v", err)
 	}
-}
-
-// Загружает .env рядом с бинарником
-func loadConfigSameDirAsBinary() (*config.Config, error) {
-	exePath, err := os.Executable()
-	if err != nil {
-		return nil, err
-	}
-	exeDir := filepath.Dir(exePath)
-	envPath := filepath.Join(exeDir, ".env")
-
-	viper.SetConfigFile(envPath)
-	viper.SetConfigType("env")
-	if err := viper.ReadInConfig(); err != nil {
-		log.Printf("No .env in %s, using environment: %v\n", exeDir, err)
-	}
-	viper.AutomaticEnv()
-
-	var cfg config.Config
-	if err := viper.Unmarshal(&cfg); err != nil {
-		return nil, fmt.Errorf("unable to decode config: %w", err)
-	}
-	// Check required
-	if cfg.OAuthClientID == "" || cfg.OAuthClientSecret == "" ||
-		cfg.OAuthRedirectURL == "" || cfg.OAuthAuthURL == "" || cfg.OAuthTokenURL == "" ||
-		cfg.SessionSecret == "" || cfg.CertFile == "" || cfg.KeyFile == "" {
-		return nil, fmt.Errorf("missing required config fields")
-	}
-	return &cfg, nil
 }
