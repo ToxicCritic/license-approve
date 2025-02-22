@@ -18,6 +18,6 @@ COPY --from=builder /app/build/client ./client
 COPY config.json config.json
 
 RUN mkdir -p server/config/certs
-COPY license-srv-srt/server.crt server/config/certs/server.crt
+COPY license-srv-srt/server.crt license-srv-srt/server.crt
 
 CMD ["./client"]

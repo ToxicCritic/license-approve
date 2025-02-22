@@ -7,7 +7,7 @@ import (
 	"net"
 	"os"
 
-	"github.com/denisbrodbeck/machineid"
+	"github.com/panta/machineid"
 )
 
 // Хеширует строку с использованием SHA-256 и возвращает укороченную хекс-сумму (иначе 259 символов выходит)
@@ -72,7 +72,6 @@ func GenerateHexLicenseKey() (string, error) {
 	ipAddressHash := hashString(ipAddress, 8)
 	hostnameHash := hashString(hostname, 8)
 
-	// Если я правильно понял, о чем написал Сергей
 	licenseKey := fmt.Sprintf("%s-%s-%s-%s", machineIDHash, macAddressHash, ipAddressHash, hostnameHash)
 
 	return licenseKey, nil
