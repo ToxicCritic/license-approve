@@ -16,35 +16,42 @@ type CheckLicenseResponse struct {
 	Message    string `json:"message"`
 }
 
+// Представляет структуру запроса для создания заявки на лицензию.
+type CreateLicenseRequestPayload struct {
+	LicenseKey string `json:"license_key"`
+}
+
+// Представляет структуру ответа на создание заявки
+type CreateLicenseRequestResponse struct {
+	Message    string `json:"message"`
+	RequestID  int    `json:"request_id"`
+	LicenseKey string `json:"license_key,omitempty"`
+}
+
 func CheckLicense(client *http.Client, serverURL, licenseKey string) (bool, string, error) {
 	// Формирование URL с параметром license_key
 	url := fmt.Sprintf("%s/api/check-license?license_key=%s", serverURL, licenseKey)
 
-	// Создание GET-запроса
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return false, "", fmt.Errorf("failed to create HTTP request: %v", err)
 	}
 
-	// Отправка запроса
 	resp, err := client.Do(req)
 	if err != nil {
 		return false, "", fmt.Errorf("failed to send HTTP request: %v", err)
 	}
 	defer resp.Body.Close()
 
-	// Чтение тела ответа
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return false, "", fmt.Errorf("failed to read response body: %v", err)
 	}
 
-	// Проверка HTTP статуса
 	if resp.StatusCode != http.StatusOK {
 		return false, "", fmt.Errorf("server returned non-OK status: %s, body: %s", resp.Status, string(body))
 	}
 
-	// Декодирование JSON-ответа
 	var checkResp CheckLicenseResponse
 	if err := json.Unmarshal(body, &checkResp); err != nil {
 		return false, "", fmt.Errorf("failed to parse JSON response: %v", err)
@@ -63,18 +70,6 @@ func CheckLicense(client *http.Client, serverURL, licenseKey string) (bool, stri
 	default:
 		return false, checkResp.Message, nil
 	}
-}
-
-// Представляет структуру запроса для создания заявки на лицензию.
-type CreateLicenseRequestPayload struct {
-	LicenseKey string `json:"license_key"`
-}
-
-// Представляет структуру ответа на создание заявки
-type CreateLicenseRequestResponse struct {
-	Message    string `json:"message"`
-	RequestID  int    `json:"request_id"`
-	LicenseKey string `json:"license_key,omitempty"`
 }
 
 // Отправляет POST-запрос на сервер для создания заявки на лицензию.

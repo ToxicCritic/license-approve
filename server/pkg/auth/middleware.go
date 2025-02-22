@@ -61,13 +61,11 @@ func AuthMiddleware() mux.MiddlewareFunc {
 					return
 				}
 
-				// Обновляем поля userSession
 				userSession.AccessToken = newToken.AccessToken
 				userSession.RefreshToken = newToken.RefreshToken
 				userSession.TokenType = newToken.TokenType
 				userSession.Expiry = newToken.Expiry
 
-				// Сохраняем в сессию
 				session.Values["user"] = userSession
 				if err := session.Save(r, w); err != nil {
 					log.Printf("[AuthMiddleware] session.Save failed: %v", err)
@@ -117,7 +115,6 @@ func validateAccessToken(accessToken string) (bool, error) {
 		OAuthConfig.ClientID, OAuthConfig.ClientSecret)
 	req.SetBasicAuth(OAuthConfig.ClientID, OAuthConfig.ClientSecret)
 
-	// Параметры в query
 	q := req.URL.Query()
 	q.Add("token", accessToken)
 	q.Add("token_type_hint", "access_token")
@@ -160,7 +157,6 @@ func refreshAccessToken(refreshToken string) (*oauth2.Token, error) {
 		RefreshToken: refreshToken,
 	}
 
-	// Создаём ctx c "небезопасным" клиентом
 	insecureTransport := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}

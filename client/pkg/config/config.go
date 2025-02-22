@@ -10,7 +10,6 @@ import (
 type Config struct {
 	LicenseServerURL string `json:"LICENSE_SERVER_URL"`
 	LicenseKey       string `json:"LICENSE_KEY"`
-	// Добавьте другие необходимые поля, если есть
 }
 
 // LoadConfig загружает конфигурацию из указанного JSON файла

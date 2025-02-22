@@ -73,7 +73,6 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Формирование URL авторизации с указанием state и режима доступа offline
 	url := OAuthConfig.AuthCodeURL(state, oauth2.AccessTypeOffline)
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }

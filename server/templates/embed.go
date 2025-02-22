@@ -6,10 +6,8 @@ import (
 	"log"
 )
 
-//go:embed *.html
 var tmplFS embed.FS
 
-// Парсит все шаблоны из embed FS
 func ParseTemplates() *template.Template {
 	tmpl, err := template.ParseFS(tmplFS, "*.html")
 	if err != nil {

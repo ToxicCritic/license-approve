@@ -25,17 +25,14 @@ const (
 func main() {
 	fmt.Println("=== Client Started ===")
 
-	// Получаем путь к бинарнику
 	exePath, err := os.Executable()
 	if err != nil {
 		log.Fatalf("Error getting executable path: %v", err)
 	}
 	exeDir := filepath.Dir(exePath)
 
-	// Формируем путь к config.json в той же папке
 	configPath := filepath.Join(exeDir, "config.json")
 
-	// Загружаем config.json
 	cfg, err := config.LoadConfig(configPath)
 	if err != nil {
 		log.Fatalf("Failed to load client config: %v", err)
@@ -55,7 +52,6 @@ func main() {
 		cfg.LicenseKey = licenseKey
 		fmt.Printf("Generated License Key: %s\n", cfg.LicenseKey)
 
-		// Сохраняем
 		if err := config.SaveConfig(configPath, cfg); err != nil {
 			log.Fatalf("Failed to save config with new license key: %v", err)
 		}
@@ -100,7 +96,7 @@ func main() {
 
 		// Если лицензия активна, выводим сообщение с TAG и завершаем работу
 		if hasLicense {
-			fmt.Println(message) // сообщение должно содержать "TAG: <значение>"
+			fmt.Println(message)
 			return
 		} else {
 			switch message {
@@ -144,7 +140,7 @@ func main() {
 					continue
 				}
 				if hasLicenseNow {
-					fmt.Println(msg) // msg содержит TAG, например "License is active. TAG: <значение>"
+					fmt.Println(msg)
 					return
 				} else {
 					log.Printf("License status: %s. Continuing to check...", msg)

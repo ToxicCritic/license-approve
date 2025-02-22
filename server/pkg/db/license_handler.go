@@ -52,7 +52,7 @@ func CreateLicenseRequestHandler(w http.ResponseWriter, r *http.Request) {
 			}
 
 			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusConflict) // HTTP 409 Conflict
+			w.WriteHeader(http.StatusConflict)
 			if err := json.NewEncoder(w).Encode(response); err != nil {
 				log.Printf("Error sending existing request response: %v", err)
 			}
@@ -72,7 +72,7 @@ func CreateLicenseRequestHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated) // HTTP 201 Created
+	w.WriteHeader(http.StatusCreated)
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		log.Printf("Error encoding response: %v", err)
 	}
@@ -92,7 +92,6 @@ func GetLicenseRequestsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Парсинг и выполнение шаблона для отображения заявок
 	tmpl := templates.ParseTemplates()
 
 	err = tmpl.ExecuteTemplate(w, "admin_requests.html", requests)
@@ -114,7 +113,6 @@ func ApproveLicenseRequestHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Извлечение параметров из формы
 	idStr := r.FormValue("id")
 	tagStr := r.FormValue("tag")
 	if idStr == "" || tagStr == "" {
