@@ -16,18 +16,11 @@
         .table-responsive {
             margin-top: 20px;
         }
-        .input-group-text, .form-control {
-            flex: 1; /* Устанавливаем равномерное распределение внутри input-group */
-        }
-        .d-flex {
-            align-items: center;
-            justify-content: space-around;
-        }
         .flex-buttons {
             display: flex;
-            gap: 10px; /* Расстояние между кнопками */
+            gap: 10px;
+            justify-content: center;
         }
-
     </style>
 </head>
 <body>
@@ -74,53 +67,76 @@
                         </td>
                         <td>{{.CreatedAt.Format "2006-01-02 15:04:05"}}</td>
                         <td>
-                            {{if or (eq .Status "pending") (eq .Status "rejected")}}
-                            <div class="d-flex">
-                                <!-- Форма одобрения заявки -->
-                                <form action="/admin/approve-license" method="POST" class="me-2">
-                                    <input type="hidden" name="id" value="{{.ID}}">
-                                    <div class="input-group">
-                                        <label for="tag_{{.ID}}" class="input-group-text">TAG</label>
-                                        <input type="number" id="tag_{{.ID}}" name="tag" min="1" max="999999" class="form-control" required>
-                                    </div>
-                                    <div class="d-flex gap-2 mt-2">
-                                        <button type="submit" class="btn btn-success btn-sm">Одобрить</button>
-                                        {{if eq .Status "pending"}}
-                                        <!-- Кнопка отклонения заявки с вызовом модального окна -->
-                                        <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#rejectModal_{{.ID}}">
-                                            Отклонить
-                                        </button>
-                                    </div>
-                                </form>
-                                <!-- Модальное окно подтверждения отклонения -->
-                                <div class="modal fade" id="rejectModal_{{.ID}}" tabindex="-1" aria-labelledby="rejectModalLabel_{{.ID}}" aria-hidden="true">
-                                  <div class="modal-dialog">
-                                    <div class="modal-content">
-                                      <div class="modal-header">
-                                        <h5 class="modal-title" id="rejectModalLabel_{{.ID}}">Подтверждение Отклонения</h5>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                      </div>
-                                      <div class="modal-body">
-                                        Вы уверены, что хотите отклонить заявку ID {{.ID}}?
-                                      </div>
-                                      <div class="modal-footer">
-                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-                                        <form action="/admin/reject-license" method="POST">
-                                            <input type="hidden" name="id" value="{{.ID}}">
-                                            <button type="submit" class="btn btn-danger">Отклонить</button>
-                                        </form>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                                {{end}}
+                            {{if eq .Status "pending"}}
+                            <div class="flex-buttons">
+                                <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#approveModal_{{.ID}}">
+                                    Одобрить
+                                </button>
+                                <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#rejectModal_{{.ID}}">
+                                    Отклонить
+                                </button>
+                            </div>
+                            {{else if eq .Status "rejected"}}
+                            <div class="flex-buttons">
+                                <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#approveModal_{{.ID}}">
+                                    Одобрить
+                                </button>
                             </div>
                             {{else}}
-                                <!-- Для статусов, отличных от "pending" и "rejected", действия недоступны -->
                                 N/A
                             {{end}}
                         </td>
                     </tr>
+
+                    <!-- Модальное окно для одобрения заявки (отображается и для "pending", и для "rejected") -->
+                    <div class="modal fade" id="approveModal_{{.ID}}" tabindex="-1" aria-labelledby="approveModalLabel_{{.ID}}" aria-hidden="true">
+                      <div class="modal-dialog">
+                        <div class="modal-content">
+                          <form action="/admin/approve-license" method="POST">
+                            <div class="modal-header">
+                              <h5 class="modal-title" id="approveModalLabel_{{.ID}}">Одобрение заявки ID {{.ID}}</h5>
+                              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                              <input type="hidden" name="id" value="{{.ID}}">
+                              <div class="mb-3">
+                                <label for="tagApprove_{{.ID}}" class="form-label">Введите TAG</label>
+                                <input type="number" id="tagApprove_{{.ID}}" name="tag" min="1" max="999999" class="form-control" required>
+                              </div>
+                            </div>
+                            <div class="modal-footer">
+                              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                              <button type="submit" class="btn btn-success">Одобрить</button>
+                            </div>
+                          </form>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Модальное окно для отклонения заявки (отображается только для "pending") -->
+                    {{if eq .Status "pending"}}
+                    <div class="modal fade" id="rejectModal_{{.ID}}" tabindex="-1" aria-labelledby="rejectModalLabel_{{.ID}}" aria-hidden="true">
+                      <div class="modal-dialog">
+                        <div class="modal-content">
+                          <form action="/admin/reject-license" method="POST">
+                            <div class="modal-header">
+                              <h5 class="modal-title" id="rejectModalLabel_{{.ID}}">Отклонение заявки ID {{.ID}}</h5>
+                              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                              <p>Вы уверены, что хотите отклонить заявку?</p>
+                              <input type="hidden" name="id" value="{{.ID}}">
+                            </div>
+                            <div class="modal-footer">
+                              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                              <button type="submit" class="btn btn-danger">Отклонить</button>
+                            </div>
+                          </form>
+                        </div>
+                      </div>
+                    </div>
+                    {{end}}
+
                     {{end}}
                 </tbody>
             </table>
