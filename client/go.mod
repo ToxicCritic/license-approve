@@ -1,4 +1,4 @@
-module example.com/licence-approval/client
+module client
 
 go 1.23.4
 

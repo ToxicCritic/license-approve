@@ -6,7 +6,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"example.com/licence-approval/server/config"
+	"server/config"
+
 	"golang.org/x/oauth2"
 )
 

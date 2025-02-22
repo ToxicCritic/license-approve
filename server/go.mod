@@ -1,4 +1,4 @@
-module example.com/licence-approval/server
+module server
 
 go 1.23.4
 

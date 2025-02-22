@@ -11,10 +11,10 @@ import (
 	"sync"
 	"time"
 
-	"example.com/licence-approval/client/pkg/config"
-	"example.com/licence-approval/client/pkg/errors"
-	"example.com/licence-approval/client/pkg/handlers"
-	"example.com/licence-approval/client/pkg/utils"
+	"client/pkg/config"
+	"client/pkg/errors"
+	"client/pkg/handlers"
+	"client/pkg/utils"
 )
 
 const (

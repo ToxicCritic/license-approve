@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"time"
 
-	"example.com/licence-approval/server/config"
+	"server/config"
 
 	"github.com/gorilla/sessions"
 	"golang.org/x/oauth2"

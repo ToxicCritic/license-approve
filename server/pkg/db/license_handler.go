@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"example.com/licence-approval/server/templates"
+	"server/templates"
 )
 
 // Представляет структуру запроса для создания заявки на лицензию

@@ -4,26 +4,18 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"os"
+
+	"server/config"
 
 	_ "github.com/lib/pq"
 )
 
 var DB *sql.DB
 
-func Init() {
-	// Считываем переменные окружения для подключения к БД
-	dbUser := getEnvOrDefault("DB_USER", "license_user")
-	dbPass := getEnvOrDefault("DB_PASS", "yourpassword")
-	dbName := getEnvOrDefault("DB_NAME", "license_db")
-	dbSSLMode := getEnvOrDefault("DB_SSLMODE", "disable")
-	dbHost := getEnvOrDefault("DB_HOST", "localhost")
-	dbPort := getEnvOrDefault("DB_PORT", "5432")
-
-	// Формируем строку подключения
+func Init(cfg *config.Config) {
 	connStr := fmt.Sprintf(
 		"user=%s password=%s dbname=%s host=%s port=%s sslmode=%s",
-		dbUser, dbPass, dbName, dbHost, dbPort, dbSSLMode,
+		cfg.DBUser, cfg.DBPass, cfg.DBName, cfg.DBHost, cfg.DBPort, cfg.DBSSLMode,
 	)
 
 	var err error
@@ -39,7 +31,6 @@ func Init() {
 	log.Println("Successfully connected to PostgreSQL!")
 }
 
-// Migrate выполняет миграции для создания таблиц
 func Migrate() {
 	createLicensesTable := `
 	CREATE TABLE IF NOT EXISTS licenses (
@@ -74,13 +65,4 @@ func Migrate() {
 	}
 
 	log.Println("Database tables created successfully!")
-}
-
-// getEnvOrDefault пытается получить значение переменной окружения или возвращает значение по умолчанию
-func getEnvOrDefault(key, defaultVal string) string {
-	val := os.Getenv(key)
-	if val == "" {
-		return defaultVal
-	}
-	return val
 }

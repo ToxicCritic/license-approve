@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"log"
 
-	"example.com/licence-approval/server/pkg/models"
-	"example.com/licence-approval/server/pkg/security"
+	"server/pkg/models"
+	"server/pkg/security"
 
 	"github.com/lib/pq"
 )

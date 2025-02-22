@@ -5,10 +5,10 @@ import (
 	"net/http"
 	"os"
 
-	"example.com/licence-approval/server/config"
-	"example.com/licence-approval/server/pkg/auth"
-	"example.com/licence-approval/server/pkg/db"
-	"example.com/licence-approval/server/pkg/security"
+	"server/config"
+	"server/pkg/auth"
+	"server/pkg/db"
+	"server/pkg/security"
 
 	"github.com/gorilla/mux"
 )
@@ -24,10 +24,9 @@ func main() {
 	auth.SetupSessionStore(cfg)
 
 	// DB init
-	db.Init()
+	db.Init(cfg)
 	db.Migrate()
 
-	// Загрузка ключей (если нужно для лицензий)
 	err = security.LoadKeys(cfg.PrivateKeyPath, cfg.PublicKeyPath)
 	if err != nil {
 		log.Fatalf("Error loading security keys: %v", err)

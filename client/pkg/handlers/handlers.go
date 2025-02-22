@@ -7,7 +7,7 @@ import (
 	"io"
 	"net/http"
 
-	"example.com/licence-approval/client/pkg/errors"
+	"client/pkg/errors"
 )
 
 // Представляет структуру ответа от сервера на запрос проверки лицензии.
