@@ -1,6 +1,7 @@
 package router
 
 import (
+	"database/sql"
 	"mock-oauth-server/internal/api/v1/httpapi/handler"
 	"net/http"
 
@@ -8,10 +9,10 @@ import (
 )
 
 // New создаёт chi.Router и регистрирует все эндпоинты
-func New() http.Handler {
+func New(db *sql.DB) http.Handler {
 	r := chi.NewRouter()
 
-	h := handler.NewHandler()
+	h := handler.NewHandler(db)
 
 	r.Get("/api/v1/config/groups", h.GetGroups)
 	r.Post("/api/v1/config/group", h.CreateGroup)

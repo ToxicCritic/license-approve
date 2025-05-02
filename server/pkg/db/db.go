@@ -52,9 +52,19 @@ func Migrate() {
 	);
 	`
 
+	createUsersTable := `
+	CREATE TABLE IF NOT EXISTS users (
+			id SERIAL PRIMARY KEY,
+			login TEXT NOT NULL UNIQUE,
+			password_hash TEXT NOT NULL,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	);
+	`
+
 	queries := []string{
 		createLicensesTable,
 		createRequestsTable,
+		createUsersTable,
 	}
 
 	for _, query := range queries {

@@ -6,6 +6,7 @@ import (
 	"log"
 	"mock-oauth-server/config"
 	"mock-oauth-server/internal/api/v1/httpapi/router"
+	"mock-oauth-server/internal/db"
 	"net/http"
 	"os"
 	"os/signal"
@@ -19,7 +20,12 @@ type App struct {
 }
 
 func New(cfg *config.Config) (*App, error) {
-	r := router.New()
+	sqlDB, err := db.InitDB(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("db init failed: %w", err)
+	}
+
+	r := router.New(sqlDB)
 
 	if _, err := os.Stat(cfg.CertFile); err != nil {
 		return nil, fmt.Errorf("cert file not found: %v", err)
@@ -28,23 +34,10 @@ func New(cfg *config.Config) (*App, error) {
 		return nil, fmt.Errorf("key file not found: %v", err)
 	}
 
-	tlsConf := &tls.Config{
-		MinVersion: tls.VersionTLS12,
-		ClientAuth: tls.NoClientCert,
-	}
+	tlsConf := &tls.Config{MinVersion: tls.VersionTLS12}
+	srv := &http.Server{Addr: cfg.Addr, Handler: r, TLSConfig: tlsConf}
 
-	srv := &http.Server{
-		Addr:      cfg.Addr,
-		Handler:   r,
-		TLSConfig: tlsConf,
-	}
-
-	app := &App{
-		cfg:    cfg,
-		server: srv,
-	}
-
-	return app, nil
+	return &App{cfg: cfg, server: srv}, nil
 }
 
 func (a *App) Run() error {

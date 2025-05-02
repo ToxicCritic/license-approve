@@ -6,6 +6,7 @@ import (
 	"log"
 )
 
+//go:embed *.html
 var tmplFS embed.FS
 
 func ParseTemplates() *template.Template {

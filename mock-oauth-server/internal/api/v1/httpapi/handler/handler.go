@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"database/sql"
 	"mock-oauth-server/internal/repository/inmem"
 	"mock-oauth-server/internal/usecase"
 )
@@ -10,8 +11,8 @@ type Handler struct {
 	store    *inmem.Store
 }
 
-func NewHandler() *Handler {
-	store := inmem.NewStore() // хранит users, groups, tokens
+func NewHandler(db *sql.DB) *Handler {
+	store := inmem.NewStore(db)
 	uc := usecase.NewUsecases(store)
 	return &Handler{
 		store:    store,

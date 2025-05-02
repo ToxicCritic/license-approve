@@ -3,6 +3,9 @@ package usecase
 import (
 	"errors"
 	"mock-oauth-server/internal/repository/inmem"
+	"time"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 type Usecases struct {
@@ -16,27 +19,28 @@ func NewUsecases(store *inmem.Store) *Usecases {
 }
 
 func (u *Usecases) GetAllUsers() []map[string]string {
-	var all []map[string]string
+	var list []map[string]string
 	for _, user := range u.store.Users {
-		all = append(all, map[string]string{
-			"id":       user.ID,
-			"username": user.Username,
+		list = append(list, map[string]string{
+			"username":   user.Username,
+			"created_at": user.CreatedAt.Format(time.RFC3339),
 		})
 	}
-	return all
+	return list
 }
 
 func (u *Usecases) CreateUser(username, password string) error {
-	for _, v := range u.store.Users {
-		if v.Username == username {
-			return errors.New("user already exists")
-		}
+	if _, exists := u.store.Users[username]; exists {
+		return errors.New("user already exists")
 	}
-	newID := "user-x" // generate
-	u.store.Users[newID] = &inmem.User{
-		ID:       newID,
-		Username: username,
-		Password: password,
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	u.store.Users[username] = &inmem.User{
+		Username:     username,
+		PasswordHash: hash,
+		CreatedAt:    time.Now(),
 	}
 	return nil
 }

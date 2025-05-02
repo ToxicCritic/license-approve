@@ -2,15 +2,19 @@ package inmem
 
 import (
 	"crypto/rand"
+	"database/sql"
 	"encoding/base64"
+	"log"
 	"time"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 // Entities
 type User struct {
-	ID       string
-	Username string
-	Password string
+	Username     string
+	PasswordHash []byte
+	CreatedAt    time.Time
 }
 
 type Group struct {
@@ -50,22 +54,43 @@ type Store struct {
 	RefreshTokens      map[string]*RefreshToken
 }
 
-func NewStore() *Store {
+func NewStore(db *sql.DB) *Store {
 	s := &Store{
 		Users:              make(map[string]*User),
-		Groups:             make(map[string]*Group),
 		AuthorizationCodes: make(map[string]*AuthorizationCode),
 		AccessTokens:       make(map[string]*AccessToken),
 		RefreshTokens:      make(map[string]*RefreshToken),
 	}
-	// дефолт user-1
-	s.Users["user-1"] = &User{
-		ID:       "user-1",
-		Username: "admin",
-		Password: "password",
+
+	rows, err := db.Query("SELECT login, password_hash, created_at FROM users")
+	if err != nil {
+		log.Fatalf("Failed to query users table: %v", err)
 	}
-	// пример группы
-	s.Groups["SuRtAdmin"] = &Group{Name: "SuRtAdmin"}
+	defer rows.Close()
+
+	for rows.Next() {
+		var login, hash string
+		var createdAt time.Time
+		if err := rows.Scan(&login, &hash, &createdAt); err != nil {
+			log.Fatalf("Error scanning user row: %v", err)
+		}
+
+		if _, err := bcrypt.Cost([]byte(hash)); err != nil {
+			log.Printf("Warning: invalid hash for user %s: %v", login, err)
+			continue
+		}
+		s.Users[login] = &User{
+			Username:     login,
+			PasswordHash: []byte(hash),
+			CreatedAt:    createdAt,
+		}
+	}
+
+	if len(s.Users) == 0 {
+		hash, _ := bcrypt.GenerateFromPassword([]byte("password"), bcrypt.DefaultCost)
+		s.Users["admin"] = &User{Username: "admin", PasswordHash: hash, CreatedAt: time.Now()}
+	}
+
 	return s
 }
 

@@ -33,7 +33,7 @@ func AuthMiddleware() mux.MiddlewareFunc {
 			auth, ok := session.Values["authenticated"].(bool)
 			if !ok || !auth {
 				log.Println("[AuthMiddleware] Not authenticated: session has no 'authenticated' flag")
-				http.Error(w, "Forbidden: Not authenticated", http.StatusForbidden)
+				http.Redirect(w, r, fmt.Sprintf("https://%s/auth/login", r.Host), http.StatusFound)
 				return
 			}
 			log.Println("[AuthMiddleware] 'authenticated' = true")
@@ -42,7 +42,7 @@ func AuthMiddleware() mux.MiddlewareFunc {
 			userSession, ok := session.Values["user"].(*UserSession)
 			if !ok || userSession.AccessToken == "" {
 				log.Println("[AuthMiddleware] No user session or empty AccessToken in session")
-				http.Error(w, "Forbidden: Token not found", http.StatusForbidden)
+				http.Redirect(w, r, fmt.Sprintf("https://%s/auth/login", r.Host), http.StatusFound)
 				return
 			}
 			log.Printf("[AuthMiddleware] Found user session with AccessToken=%q Expiry=%v RefreshToken=%q\n",
@@ -57,7 +57,7 @@ func AuthMiddleware() mux.MiddlewareFunc {
 				newToken, err := refreshAccessToken(userSession.RefreshToken)
 				if err != nil {
 					log.Printf("[AuthMiddleware] refreshAccessToken failed: %v", err)
-					http.Error(w, "Forbidden: Token expired and refresh failed", http.StatusForbidden)
+					http.Redirect(w, r, fmt.Sprintf("https://%s/auth/login", r.Host), http.StatusFound)
 					return
 				}
 
@@ -82,12 +82,12 @@ func AuthMiddleware() mux.MiddlewareFunc {
 			valid, err := validateAccessToken(userSession.AccessToken)
 			if err != nil {
 				log.Printf("[AuthMiddleware] validateAccessToken returned error: %v", err)
-				http.Error(w, "Forbidden: Invalid token (error)", http.StatusForbidden)
+				http.Redirect(w, r, fmt.Sprintf("https://%s/auth/login", r.Host), http.StatusFound)
 				return
 			}
 			if !valid {
 				log.Println("[AuthMiddleware] validateAccessToken says token is not active/valid")
-				http.Error(w, "Forbidden: Invalid token", http.StatusForbidden)
+				http.Redirect(w, r, fmt.Sprintf("https://%s/auth/login", r.Host), http.StatusFound)
 				return
 			}
 
