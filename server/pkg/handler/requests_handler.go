@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"server/pkg/auth"
 	"server/pkg/db"
 	"server/pkg/models"
 	"server/templates"
@@ -121,7 +122,23 @@ func ApproveLicenseRequestHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid id or tag", http.StatusBadRequest)
 		return
 	}
-	if err := db.ApproveLicenseRequest(id, tag); err != nil {
+
+	session, err := auth.Store.Get(r, "auth-session")
+	if err != nil {
+		log.Printf("Error getting session: %v", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+	log.Printf("Session.Values: %+v", session.Values)
+	userSession, ok := session.Values["user"].(*auth.UserSession)
+	if !ok {
+		log.Println("No user in session")
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+	approver := userSession.Username
+
+	if err := db.ApproveLicenseRequest(id, tag, approver); err != nil {
 		log.Printf("Error approving: %v", err)
 		http.Error(w, fmt.Sprintf("Failed to approve: %v", err), http.StatusInternalServerError)
 		return

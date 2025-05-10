@@ -10,4 +10,5 @@ type License struct {
 	Status           string    `json:"status"`
 	CreatedAt        time.Time `json:"created_at"`
 	Tag              int       `json:"tag"`
+	ApprovedBy       string    `json:"approved_by"`
 }

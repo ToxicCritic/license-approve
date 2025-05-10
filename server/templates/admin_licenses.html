@@ -49,6 +49,7 @@
                         <th scope="col">Создана</th>
                         <th scope="col">Действительна до</th>
                         <th scope="col">TAG</th>
+                        <th scope="col">Активировал</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -70,6 +71,7 @@
                         <td>{{.CreatedAt.Format "2006-01-02 15:04:05"}}</td>
                         <td>{{.CreatedAt.AddDate 1 0 0 | dateFormat}}</td>
                         <td>{{.Tag}}</td>
+                        <td>{{.ApprovedBy}}</td>
                     </tr>
                     {{end}}
                 </tbody>

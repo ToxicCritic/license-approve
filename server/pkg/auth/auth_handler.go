@@ -22,6 +22,7 @@ func init() {
 
 // UserSession хранит токены и время истечения для сессии пользователя
 type UserSession struct {
+	Username     string
 	AccessToken  string
 	RefreshToken string
 	TokenType    string
@@ -79,37 +80,42 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 // CallbackHandler обрабатывает обратный вызов OAuth2: проверяет state, обменивает код на токен и сохраняет сессию
 func CallbackHandler(w http.ResponseWriter, r *http.Request) {
-	queryState := r.URL.Query().Get("state")
+	state := r.URL.Query().Get("state")
 	code := r.URL.Query().Get("code")
 
-	session, err := Store.Get(r, "auth-session")
+	sess, err := Store.Get(r, "auth-session")
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
-
-	savedState, ok := session.Values["state"].(string)
-	if !ok || savedState != queryState {
-		http.Error(w, "Invalid state param", http.StatusBadRequest)
+	if sess.Values["state"] != state {
+		http.Error(w, "Invalid state", http.StatusBadRequest)
 		return
 	}
 
 	token, err := ExchangeCodeForToken(code)
 	if err != nil {
-		http.Error(w, "Failed to exchange code for token: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Token exchange failed: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	username, _ := token.Extra("username").(string)
+	if username == "" {
+		username, _ = token.Extra("login").(string)
+	}
+
 	userSession := &UserSession{
+		Username:     username,
 		AccessToken:  token.AccessToken,
 		RefreshToken: token.RefreshToken,
 		TokenType:    token.TokenType,
 		Expiry:       token.Expiry,
 	}
-	session.Values["authenticated"] = true
-	session.Values["user"] = userSession
-	if err := session.Save(r, w); err != nil {
-		http.Error(w, "Failed to save session: "+err.Error(), http.StatusInternalServerError)
+
+	sess.Values["authenticated"] = true
+	sess.Values["user"] = userSession
+	if err := sess.Save(r, w); err != nil {
+		http.Error(w, "Session save failed: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 

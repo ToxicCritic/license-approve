@@ -95,6 +95,7 @@ func (h *Handler) handleAuthorizationCodeGrant(w http.ResponseWriter, r *http.Re
 		"token_type":    "Bearer",
 		"expires_in":    60, // ДЛЯ ТЕСТА ОБНОВЛЕНИЯ ТОКЕНА 1 МИНУТА
 		"refresh_token": refreshToken,
+		"username":      ac.UserID,
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)
@@ -142,6 +143,7 @@ func (h *Handler) handleRefreshTokenGrant(w http.ResponseWriter, r *http.Request
 		"token_type":    "Bearer",
 		"expires_in":    60, // ДЛЯ ТЕСТА ОБНОВЛЕНИЯ ТОКЕНА 1 МИНУТА
 		"refresh_token": newRefresh,
+		"username":      rt.UserID,
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)

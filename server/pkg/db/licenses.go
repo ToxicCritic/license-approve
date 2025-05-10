@@ -8,8 +8,9 @@ import (
 // GetAllLicenses возвращает список всех лицензий, упорядоченных по дате создания (DESC).
 func GetAllLicenses() ([]models.License, error) {
 	rows, err := DB.Query(`
-		SELECT id, license_key, license_signature, status, created_at, tag
-		FROM licenses
+		SELECT l.id, l.license_key, l.license_signature, l.status, l.created_at, l.tag, u.login
+		FROM licenses l
+		JOIN users u ON l.approved_by = u.login
 		ORDER BY created_at DESC
 	`)
 	if err != nil {
@@ -27,6 +28,7 @@ func GetAllLicenses() ([]models.License, error) {
 			&lic.Status,
 			&lic.CreatedAt,
 			&lic.Tag,
+			&lic.ApprovedBy,
 		); err != nil {
 			return nil, err
 		}
@@ -41,8 +43,9 @@ func GetAllLicenses() ([]models.License, error) {
 // GetLicensesByKey ищет лицензии по части ключа (ILIKE).
 func GetLicensesByKey(key string) ([]models.License, error) {
 	rows, err := DB.Query(`
-		SELECT id, license_key, license_signature, status, created_at, tag
-		FROM licenses
+		SELECT l.id, l.license_key, l.license_signature, l.status, l.created_at, l.tag, u.login
+		FROM licenses l
+		JOIN users u ON l.approved_by = u.login
 		WHERE license_key ILIKE '%' || $1 || '%'
 		ORDER BY created_at DESC
 	`, key)
@@ -61,6 +64,7 @@ func GetLicensesByKey(key string) ([]models.License, error) {
 			&lic.Status,
 			&lic.CreatedAt,
 			&lic.Tag,
+			&lic.ApprovedBy,
 		); err != nil {
 			return nil, err
 		}
@@ -75,9 +79,9 @@ func GetLicensesByKey(key string) ([]models.License, error) {
 // GetLicenseByKey возвращает лицензию по точному совпадению ключа или nil.
 func GetLicenseByKey(licenseKey string) (*models.License, error) {
 	const query = `
-		SELECT id, license_key, license_signature, status, created_at, tag
-		FROM licenses
-		WHERE license_key = $1
+		SELECT l.id, l.license_key, l.license_signature, l.status, l.created_at, l.tag, u.login
+		FROM licenses l
+		JOIN users u ON l.approved_by = u.login
 	`
 	var lic models.License
 	err := DB.QueryRow(query, licenseKey).Scan(
@@ -87,6 +91,7 @@ func GetLicenseByKey(licenseKey string) (*models.License, error) {
 		&lic.Status,
 		&lic.CreatedAt,
 		&lic.Tag,
+		&lic.ApprovedBy,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {

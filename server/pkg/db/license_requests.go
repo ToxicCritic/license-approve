@@ -114,13 +114,19 @@ func GetLicenseRequestsByKey(key string) ([]models.LicenseRequest, error) {
 }
 
 // ApproveLicenseRequest создаёт лицензию по заявке и помечает её как 'approved'.
-func ApproveLicenseRequest(requestID, tag int) error {
+func ApproveLicenseRequest(requestID, tag int, approver string) error {
+	log.Printf("[Approve] request=%d tag=%d approver=%q", requestID, tag, approver)
+	if approver == "" || approver == "unknown" {
+		return fmt.Errorf("cannot approve license: approver login is undefined")
+	}
+
 	var licenseKey string
 	const selectQ = `
 		SELECT license_key
-		FROM license_requests
-		WHERE id = $1 AND status != 'approved'
-		FOR UPDATE
+		  FROM license_requests
+		 WHERE id = $1
+		   AND status != 'approved'
+		  FOR UPDATE
 	`
 	if err := DB.QueryRow(selectQ, requestID).Scan(&licenseKey); err != nil {
 		if err == sql.ErrNoRows {
@@ -135,17 +141,18 @@ func ApproveLicenseRequest(requestID, tag int) error {
 	}
 
 	const insertQ = `
-		INSERT INTO licenses (license_key, status, tag, license_signature)
-		VALUES ($1, 'active', $2, $3)
+		INSERT INTO licenses
+		            (license_key, status, tag, license_signature, approved_by)
+		     VALUES ($1, 'active', $2, $3, $4)
 	`
-	if _, err := DB.Exec(insertQ, licenseKey, tag, signature); err != nil {
+	if _, err := DB.Exec(insertQ, licenseKey, tag, signature, approver); err != nil {
 		return err
 	}
 
 	const updateQ = `
 		UPDATE license_requests
-		SET status = 'approved'
-		WHERE id = $1
+		   SET status = 'approved'
+		 WHERE id = $1
 	`
 	_, err = DB.Exec(updateQ, requestID)
 	return err
