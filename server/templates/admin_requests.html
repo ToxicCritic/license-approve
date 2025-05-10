@@ -50,7 +50,6 @@
                     <tr>
                         <th scope="col">ID</th>
                         <th scope="col">Ключ лицензии</th>
-                        <th scope="col">Статус</th>
                         <th scope="col">Создана</th>
                         <th scope="col">Действия</th>
                     </tr>
@@ -60,17 +59,6 @@
                     <tr>
                         <td>{{.ID}}</td>
                         <td>{{.LicenseKey}}</td>
-                        <td>
-                            {{if eq .Status "pending"}}
-                                <span class="badge bg-warning text-dark">В ожидании</span>
-                            {{else if eq .Status "approved"}}
-                                <span class="badge bg-success">Одобрена</span>
-                            {{else if eq .Status "rejected"}}
-                                <span class="badge bg-danger">Отклонена</span>
-                            {{else}}
-                                <span class="badge bg-secondary">{{.Status}}</span>
-                            {{end}}
-                        </td>
                         <td>{{.CreatedAt | dateFormat}}</td>
                         <td>
                             {{if eq .Status "pending"}}
