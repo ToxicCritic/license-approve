@@ -8,6 +8,7 @@ import (
 	"server/config"
 	"server/pkg/auth"
 	"server/pkg/db"
+	"server/pkg/handler"
 	"server/pkg/security"
 
 	"github.com/gorilla/mux"
@@ -42,14 +43,14 @@ func main() {
 	// Админские маршруты
 	adminRouter := router.PathPrefix("/admin").Subrouter()
 	adminRouter.Use(auth.AuthMiddleware())
-	adminRouter.HandleFunc("/license-requests", db.GetLicenseRequestsHandler).Methods("GET")
-	adminRouter.HandleFunc("/licenses", db.GetLicensesHandler).Methods("GET")
-	adminRouter.HandleFunc("/approve-license", db.ApproveLicenseRequestHandler).Methods("POST")
-	adminRouter.HandleFunc("/reject-license", db.RejectLicenseRequestHandler).Methods("POST")
+	adminRouter.HandleFunc("/license-requests", handler.GetLicenseRequestsHandler).Methods("GET")
+	adminRouter.HandleFunc("/licenses", handler.GetLicensesHandler).Methods("GET")
+	adminRouter.HandleFunc("/approve-license", handler.ApproveLicenseRequestHandler).Methods("POST")
+	adminRouter.HandleFunc("/reject-license", handler.RejectLicenseRequestHandler).Methods("POST")
 
 	// Открытые маршруты
-	router.HandleFunc("/api/check-license", db.CheckLicenseHandler).Methods("GET")
-	router.HandleFunc("/api/create-license-request", db.CreateLicenseRequestHandler).Methods("POST")
+	router.HandleFunc("/api/check-license", handler.CheckLicenseHandler).Methods("GET")
+	router.HandleFunc("/api/create-license-request", handler.CreateLicenseRequestHandler).Methods("POST")
 
 	log.Println("Certificate:", cfg.CertFile)
 	log.Println("KeyFile:", cfg.KeyFile)
