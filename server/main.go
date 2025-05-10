@@ -43,6 +43,7 @@ func main() {
 	adminRouter := router.PathPrefix("/admin").Subrouter()
 	adminRouter.Use(auth.AuthMiddleware())
 	adminRouter.HandleFunc("/license-requests", db.GetLicenseRequestsHandler).Methods("GET")
+	adminRouter.HandleFunc("/licenses", db.GetLicensesHandler).Methods("GET")
 	adminRouter.HandleFunc("/approve-license", db.ApproveLicenseRequestHandler).Methods("POST")
 	adminRouter.HandleFunc("/reject-license", db.RejectLicenseRequestHandler).Methods("POST")
 

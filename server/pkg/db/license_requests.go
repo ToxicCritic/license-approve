@@ -174,7 +174,7 @@ func RejectLicenseRequest(requestID int) error {
 	return nil
 }
 
-// Получает лицензию пользователя по его ID
+// Получает лицензию пользователя по LicenseKey
 func GetLicenseByKey(licenseKey string) (*models.License, error) {
 	query := `
         SELECT *
@@ -199,6 +199,50 @@ func GetLicenseByKey(licenseKey string) (*models.License, error) {
 	}
 
 	return &license, nil
+}
+
+func GetLicensesByKey(key string) ([]models.License, error) {
+	rows, err := DB.Query(`
+			SELECT id, license_key, license_signature, status, created_at, tag
+			FROM licenses
+			WHERE license_key ILIKE '%' || $1 || '%'
+			ORDER BY created_at DESC
+	`, key)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []models.License
+	for rows.Next() {
+		var l models.License
+		if err := rows.Scan(&l.ID, &l.LicenseKey, &l.LicenseSignature, &l.Status, &l.CreatedAt, &l.Tag); err != nil {
+			return nil, err
+		}
+		out = append(out, l)
+	}
+	return out, nil
+}
+
+func GetLicenseRequestsByKey(key string) ([]models.LicenseRequest, error) {
+	rows, err := DB.Query(`
+			SELECT id, status, created_at, license_key
+			FROM license_requests
+			WHERE license_key ILIKE '%' || $1 || '%'
+			ORDER BY created_at DESC
+	`, key)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var result []models.LicenseRequest
+	for rows.Next() {
+		var r models.LicenseRequest
+		if err := rows.Scan(&r.ID, &r.Status, &r.CreatedAt, &r.LicenseKey); err != nil {
+			return nil, err
+		}
+		result = append(result, r)
+	}
+	return result, nil
 }
 
 // Проверяет, есть ли у пользователя уже заявка со статусом 'pending'

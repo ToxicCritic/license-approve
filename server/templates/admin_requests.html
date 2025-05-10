@@ -30,13 +30,20 @@
                     aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <a href="/admin/licenses" class="btn btn-dark ms-auto">Лицензии</a>
+            </div>
         </div>
     </nav>
 
     <div class="container">
-        <h1 class="mt-5 mb-4">Запросы на Лицензии</h1>
-
-        <!-- Таблица запросов на лицензии -->
+      <h1 class="mt-5 mb-4">Запросы на Лицензии</h1>
+      <form method="GET" action="/admin/license-requests" class="mb-3">
+        <div class="input-group">
+          <input type="text" name="q" class="form-control" placeholder="Поиск по ключу" value="{{.Query}}">
+          <button class="btn btn-secondary" type="submit">Найти</button>
+        </div>
+      </form>
         <div class="table-responsive">
             <table class="table table-striped table-bordered align-middle">
                 <thead class="table-dark">
@@ -49,7 +56,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {{range .}}
+                    {{range .Requests}}
                     <tr>
                         <td>{{.ID}}</td>
                         <td>{{.LicenseKey}}</td>
@@ -64,7 +71,7 @@
                                 <span class="badge bg-secondary">{{.Status}}</span>
                             {{end}}
                         </td>
-                        <td>{{.CreatedAt.Format "2006-01-02 15:04:05"}}</td>
+                        <td>{{.CreatedAt | dateFormat}}</td>
                         <td>
                             {{if eq .Status "pending"}}
                             <div class="flex-buttons">
@@ -87,7 +94,7 @@
                         </td>
                     </tr>
 
-                    <!-- Модальное окно для одобрения заявки (отображается и для "pending", и для "rejected") -->
+                    <!-- Модальное окно для одобрения заявки -->
                     <div class="modal fade" id="approveModal_{{.ID}}" tabindex="-1" aria-labelledby="approveModalLabel_{{.ID}}" aria-hidden="true">
                       <div class="modal-dialog">
                         <div class="modal-content">
@@ -112,7 +119,7 @@
                       </div>
                     </div>
 
-                    <!-- Модальное окно для отклонения заявки (отображается только для "pending") -->
+                    <!-- Модальное окно для отклонения заявки -->
                     {{if eq .Status "pending"}}
                     <div class="modal fade" id="rejectModal_{{.ID}}" tabindex="-1" aria-labelledby="rejectModalLabel_{{.ID}}" aria-hidden="true">
                       <div class="modal-dialog">

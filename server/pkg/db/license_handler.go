@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"server/pkg/models"
 	"server/templates"
 )
 
@@ -75,29 +76,6 @@ func CreateLicenseRequestHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		log.Printf("Error encoding response: %v", err)
-	}
-}
-
-// Обрабатывает получение всех заявок на лицензии для административной панели.
-func GetLicenseRequestsHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Invalid request method, use GET", http.StatusMethodNotAllowed)
-		return
-	}
-
-	requests, err := GetLicenseRequests()
-	if err != nil {
-		log.Printf("Error fetching license requests: %v", err)
-		http.Error(w, "Failed to get license requests", http.StatusInternalServerError)
-		return
-	}
-
-	tmpl := templates.ParseTemplates()
-
-	err = tmpl.ExecuteTemplate(w, "admin_requests.html", requests)
-	if err != nil {
-		log.Println("Error rendering template:", err)
-		http.Error(w, "Error rendering template", http.StatusInternalServerError)
 	}
 }
 
@@ -251,4 +229,121 @@ func CheckLicenseHandler(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		log.Printf("Error encoding license status response: %v", err)
 	}
+}
+
+func GetLicenseRequestsHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Invalid request method, use GET", http.StatusMethodNotAllowed)
+		return
+	}
+
+	q := r.URL.Query().Get("q")
+	var requests []models.LicenseRequest
+	var err error
+	if q != "" {
+		requests, err = GetLicenseRequestsByKey(q)
+	} else {
+		requests, err = GetLicenseRequests()
+	}
+	if err != nil {
+		log.Printf("Error fetching license requests: %v", err)
+		http.Error(w, "Failed to get license requests", http.StatusInternalServerError)
+		return
+	}
+
+	tmpl := templates.ParseTemplates()
+	data := struct {
+		Requests []models.LicenseRequest
+		Query    string
+	}{requests, q}
+
+	if err := tmpl.ExecuteTemplate(w, "admin_requests.html", data); err != nil {
+		log.Println("Error rendering template:", err)
+		http.Error(w, "Error rendering template", http.StatusInternalServerError)
+	}
+}
+
+func GetLicensesHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Invalid request method, use GET", http.StatusMethodNotAllowed)
+		return
+	}
+
+	q := r.URL.Query().Get("q")
+	var list []models.License
+	var err error
+	if q != "" {
+		list, err = GetLicensesByKey(q)
+	} else {
+		list, err = GetAllLicenses()
+	}
+	if err != nil {
+		log.Printf("Error fetching licenses: %v", err)
+		http.Error(w, "Failed to get licenses", http.StatusInternalServerError)
+		return
+	}
+
+	tmpl := templates.ParseTemplates()
+	data := struct {
+		Licenses []models.License
+		Query    string
+	}{list, q}
+
+	if err := tmpl.ExecuteTemplate(w, "admin_licenses.html", data); err != nil {
+		log.Println("Error rendering template:", err)
+		http.Error(w, "Error rendering template", http.StatusInternalServerError)
+	}
+}
+
+func GetLicenses() ([]models.License, error) {
+	rows, err := DB.Query(`
+			SELECT id, license_key, license_signature, status, created_at, tag
+			FROM licenses
+			ORDER BY created_at DESC
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var list []models.License
+	for rows.Next() {
+		var lic models.License
+		if err := rows.Scan(
+			&lic.ID,
+			&lic.LicenseKey,
+			&lic.LicenseSignature,
+			&lic.Status,
+			&lic.CreatedAt,
+			&lic.Tag,
+		); err != nil {
+			return nil, err
+		}
+		list = append(list, lic)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return list, nil
+}
+
+func GetAllLicenses() ([]models.License, error) {
+	rows, err := DB.Query(`
+			SELECT id, license_key, license_signature, status, created_at, tag
+			FROM licenses
+			ORDER BY created_at DESC
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []models.License
+	for rows.Next() {
+		var l models.License
+		if err := rows.Scan(&l.ID, &l.LicenseKey, &l.LicenseSignature, &l.Status, &l.CreatedAt, &l.Tag); err != nil {
+			return nil, err
+		}
+		out = append(out, l)
+	}
+	return out, nil
 }
