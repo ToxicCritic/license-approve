@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	"fmt"
 	"server/pkg/models"
 )
 
@@ -79,10 +80,17 @@ func GetLicensesByKey(key string) ([]models.License, error) {
 // GetLicenseByKey возвращает лицензию по точному совпадению ключа или nil.
 func GetLicenseByKey(licenseKey string) (*models.License, error) {
 	const query = `
-		SELECT l.id, l.license_key, l.license_signature, l.status, l.created_at, l.tag, u.login
-		FROM licenses l
-		JOIN users u ON l.approved_by = u.login
+			SELECT l.id,
+						 l.license_key,
+						 l.license_signature,
+						 l.status,
+						 l.created_at,
+						 l.tag,
+						 l.approved_by
+				FROM licenses l
+			 WHERE l.license_key = $1;
 	`
+
 	var lic models.License
 	err := DB.QueryRow(query, licenseKey).Scan(
 		&lic.ID,
@@ -97,7 +105,7 @@ func GetLicenseByKey(licenseKey string) (*models.License, error) {
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
-		return nil, err
+		return nil, fmt.Errorf("GetLicenseByKey: %w", err)
 	}
 	return &lic, nil
 }
