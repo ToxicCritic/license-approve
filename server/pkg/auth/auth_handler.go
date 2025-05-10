@@ -138,5 +138,5 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to save session", http.StatusInternalServerError)
 		return
 	}
-	http.Redirect(w, r, "/", http.StatusSeeOther)
+	http.Redirect(w, r, "/auth/login", http.StatusSeeOther)
 }
